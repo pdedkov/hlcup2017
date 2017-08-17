@@ -13,6 +13,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -39,12 +40,12 @@ var dataMap = map[string]string{
 
 // User type stuct
 type User struct {
-	ID        *int    `json:"id"`
-	FirstName *string `json:"first_name"`
-	LastName  *string `json:"last_name"`
-	Email     *string `json:"email"`
-	Gender    *string `json:"gender"`
-	Birthday  *int64  `json:"birth_date"`
+	ID        int    `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Gender    string `json:"gender"`
+	Birthday  int64  `json:"birth_date"`
 }
 
 // Users is an array of user
@@ -54,11 +55,11 @@ type Users struct {
 
 // Location struct
 type Location struct {
-	ID       *int    `json:"id"`
-	Distance *int    `json:"distance"`
-	Country  *string `json:"country"`
-	City     *string `json:"city"`
-	Place    *string `json:"place"`
+	ID       int    `json:"id"`
+	Distance int    `json:"distance"`
+	Country  string `json:"country"`
+	City     string `json:"city"`
+	Place    string `json:"place"`
 }
 
 // Locations is an array of location
@@ -68,11 +69,11 @@ type Locations struct {
 
 // Visit struct contain user locations visits
 type Visit struct {
-	ID       *int   `json:"id"`
-	User     *int   `json:"user"`
-	Location *int   `json:"location"`
-	Visited  *int   `json:"visited_at"`
-	Mark     *int   `json:"mark"`
+	ID       int    `json:"id"`
+	User     int    `json:"user"`
+	Location int    `json:"location"`
+	Visited  int    `json:"visited_at"`
+	Mark     int    `json:"mark"`
 	Age      int    `json:"-"`
 	Gender   string `json:"-"`
 	Country  string `json:"-"`
@@ -154,12 +155,12 @@ func (d Database) FilterVisits(q url.Values, recs []Visit) ([]Visit, error) {
 	var out []Visit
 	for _, rec := range recs {
 		if v, ok := conditions["fromDate"]; ok {
-			if *rec.Visited < v {
+			if rec.Visited < v {
 				continue
 			}
 		}
 		if v, ok := conditions["toDate"]; ok {
-			if *rec.Visited > v {
+			if rec.Visited > v {
 				continue
 			}
 		}
@@ -291,26 +292,26 @@ func main() {
 		// init maps
 		Db.Locations = make(map[int]Location)
 		for _, r := range ls {
-			Db.Locations[*r.ID] = r
+			Db.Locations[r.ID] = r
 		}
 		log.Printf("Total %d locs", len(Db.Locations))
 
 		Db.Users = make(map[int]User)
 		for _, r := range us {
-			Db.Users[*r.ID] = r
+			Db.Users[r.ID] = r
 		}
 		log.Printf("Total %d users", len(Db.Users))
 
 		Db.Visits = make(map[int]Visit)
 		for _, r := range vs {
-			bd := time.Unix(*Db.Users[*r.User].Birthday, 0)
+			bd := time.Unix(Db.Users[r.User].Birthday, 0)
 			r.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
-			r.Gender = *Db.Users[*r.User].Gender
+			r.Gender = Db.Users[r.User].Gender
 
-			r.Distance = *Db.Locations[*r.Location].Distance
-			r.Country = *Db.Locations[*r.Location].Country
+			r.Distance = Db.Locations[r.Location].Distance
+			r.Country = Db.Locations[r.Location].Country
 
-			Db.Visits[*r.ID] = r
+			Db.Visits[r.ID] = r
 		}
 		log.Printf("Total %d visits", len(Db.Visits))
 
@@ -318,9 +319,9 @@ func main() {
 		Db.LocationVisits = make(map[int][]Visit)
 
 		for _, value := range Db.Visits {
-			Db.UserVisit[*value.User] = append(Db.UserVisit[*value.User], value)
+			Db.UserVisit[value.User] = append(Db.UserVisit[value.User], value)
 
-			Db.LocationVisits[*value.Location] = append(Db.LocationVisits[*value.Location], value)
+			Db.LocationVisits[value.Location] = append(Db.LocationVisits[value.Location], value)
 		}
 		log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
 		log.Print("Data ready")
@@ -346,6 +347,24 @@ func main() {
 			return c.JSON(http.StatusNotFound, struct{}{})
 		}
 		var v Visit
+		var t struct {
+			ID       json.RawMessage `json:"id"`
+			User     json.RawMessage `json:"user"`
+			Location json.RawMessage `json:"location"`
+			Visited  json.RawMessage `json:"visited_at"`
+			Mark     json.RawMessage `json:"mark"`
+		}
+
+		if err := c.Bind(&t); err != nil {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+		if string(t.ID) == "null" || string(t.User) == "null" || string(t.Location) == "null" || string(t.Visited) == "null" || string(t.Mark) == "null" {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+		mutex := &sync.RWMutex{}
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		if c.Param("id") == "new" {
 			v = Visit{}
 		} else {
@@ -354,48 +373,69 @@ func main() {
 			}
 			v = Db.Visits[id]
 		}
-		if err := c.Bind(&v); err != nil {
+		if len(t.ID) > 0 {
+			v.ID, err = strconv.Atoi(string(t.ID))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+		if c.Param("id") != "new" && v.ID != id {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+		if len(t.User) > 0 {
+			v.User, err = strconv.Atoi(string(t.User))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+
+		if _, ok := Db.Users[v.User]; !ok {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if v.ID == nil || v.User == nil || v.Location == nil || v.Visited == nil || v.Mark == nil {
+		if len(t.Location) > 0 {
+			v.Location, err = strconv.Atoi(string(t.Location))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+		if _, ok := Db.Locations[v.Location]; !ok {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if c.Param("id") != "new" && *v.ID != id {
+		if len(t.Visited) > 0 {
+			v.Visited, err = strconv.Atoi(string(t.Visited))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+		if v.Visited < 946684800 || v.Visited > 1420156799 {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if _, ok := Db.Users[*v.User]; !ok {
+		if len(t.Mark) > 0 {
+			v.Mark, err = strconv.Atoi(string(t.Mark))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+		if v.Mark < 0 || v.Mark > 5 {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if _, ok := Db.Locations[*v.Location]; !ok {
-			return c.JSON(http.StatusBadRequest, struct{}{})
+		if c.Param("id") == "new" {
+			bd := time.Unix(Db.Users[v.User].Birthday, 0)
+			v.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
+			v.Gender = Db.Users[v.User].Gender
+
+			v.Distance = Db.Locations[v.Location].Distance
+			v.Country = Db.Locations[v.Location].Country
 		}
 
-		if *v.Visited < 946684800 || *v.Visited > 1420156799 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
+		Db.UserVisit[v.User] = append(Db.UserVisit[v.User], v)
+		Db.LocationVisits[v.Location] = append(Db.LocationVisits[v.Location], v)
 
-		if *v.Mark < 0 || *v.Mark > 5 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		mutex := &sync.RWMutex{}
-		mutex.Lock()
-		bd := time.Unix(*Db.Users[*v.User].Birthday, 0)
-		v.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
-		v.Gender = *Db.Users[*v.User].Gender
-
-		v.Distance = *Db.Locations[*v.Location].Distance
-		v.Country = *Db.Locations[*v.Location].Country
-
-		Db.UserVisit[*v.User] = append(Db.UserVisit[*v.User], v)
-		Db.LocationVisits[*v.Location] = append(Db.LocationVisits[*v.Location], v)
-
-		Db.Visits[*v.ID] = v
-		mutex.Unlock()
+		Db.Visits[v.ID] = v
 
 		return c.JSON(http.StatusOK, struct{}{})
 	})
@@ -406,51 +446,90 @@ func main() {
 			return c.JSON(http.StatusNotFound, struct{}{})
 		}
 		var u User
-		if c.Param("id") == "new" {
-			u = User{}
-		} else {
-			if _, ok := Db.Users[id]; !ok {
-				return c.JSON(http.StatusNotFound, struct{}{})
-			}
-			u = Db.Users[id]
+
+		var t struct {
+			ID        json.RawMessage `json:"id"`
+			FirstName json.RawMessage `json:"first_name"`
+			LastName  json.RawMessage `json:"last_name"`
+			Email     json.RawMessage `json:"email"`
+			Gender    json.RawMessage `json:"gender"`
+			Birthday  json.RawMessage `json:"birth_date"`
 		}
 
-		if err := c.Bind(&u); err != nil {
+		if err := c.Bind(&t); err != nil {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if u.ID == nil || u.Gender == nil || u.Birthday == nil || u.FirstName == nil || u.LastName == nil || u.Email == nil {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if c.Param("id") != "new" && *u.ID != id {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if *u.Gender != "f" && *u.Gender != "m" {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if *u.Birthday < -1262304000 || *u.Birthday > 915235199 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if utf8.RuneCountInString(*u.FirstName) > 50 || utf8.RuneCountInString(*u.FirstName) <= 0 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if utf8.RuneCountInString(*u.LastName) > 50 || utf8.RuneCountInString(*u.LastName) <= 0 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if utf8.RuneCountInString(*u.Email) > 100 || utf8.RuneCountInString(*u.Email) <= 0 {
+		if string(t.ID) == "null" || string(t.Gender) == "null" || string(t.Birthday) == "null" || string(t.FirstName) == "null" || string(t.LastName) == "null" || string(t.Email) == "null" {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
 		mutex := &sync.RWMutex{}
 		mutex.Lock()
-		Db.Users[*u.ID] = u
-		mutex.Unlock()
+		defer mutex.Unlock()
+
+		if c.Param("id") != "new" {
+			if _, ok := Db.Users[id]; !ok {
+				return c.JSON(http.StatusNotFound, struct{}{})
+			}
+			u = Db.Users[id]
+		} else {
+			u = User{}
+		}
+		if len(t.ID) > 0 {
+			u.ID, err = strconv.Atoi(string(t.ID))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+		if c.Param("id") != "new" && u.ID != id {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		if len(t.FirstName) > 0 {
+			f, _ := strconv.Unquote(string(t.FirstName))
+			u.FirstName = strings.Trim(f, "\"")
+		}
+		if utf8.RuneCountInString(u.FirstName) > 50 {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		if len(t.LastName) > 0 {
+			l, _ := strconv.Unquote(string(t.LastName))
+			u.LastName = strings.Trim(l, "\"")
+		}
+		if utf8.RuneCountInString(u.LastName) > 50 {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		if len(t.Gender) > 0 {
+			g, _ := strconv.Unquote(string(t.Gender))
+			u.Gender = strings.Trim(g, "\"")
+		}
+		if u.Gender != "f" && u.Gender != "m" {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		if len(t.Birthday) > 0 {
+			u.Birthday, err = strconv.ParseInt(string(t.Birthday), 10, 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
+
+		if u.Birthday < -1262304000 || u.Birthday > 915235199 {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		if len(t.Email) > 0 {
+			e, _ := strconv.Unquote(string(t.Email))
+			u.Email = strings.Trim(e, "\"")
+		}
+		if utf8.RuneCountInString(u.Email) > 100 {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		Db.Users[u.ID] = u
 
 		return c.JSON(http.StatusOK, struct{}{})
 	})
@@ -461,6 +540,24 @@ func main() {
 			return c.JSON(http.StatusNotFound, struct{}{})
 		}
 		var l Location
+		var t struct {
+			ID       json.RawMessage `json:"id"`
+			Distance json.RawMessage `json:"distance"`
+			Country  json.RawMessage `json:"country"`
+			City     json.RawMessage `json:"city"`
+			Place    json.RawMessage `json:"place"`
+		}
+		if err := c.Bind(&t); err != nil {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+		if string(t.ID) == "null" || string(t.Distance) == "null" || string(t.Country) == "null" || string(t.City) == "null" || string(t.Place) == "null" {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
+		mutex := &sync.RWMutex{}
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		if c.Param("id") == "new" {
 			l = Location{}
 		} else {
@@ -469,34 +566,46 @@ func main() {
 			}
 			l = Db.Locations[id]
 		}
+		if len(t.ID) > 0 {
+			l.ID, err = strconv.Atoi(string(t.ID))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
+		}
 
-		if err := c.Bind(&l); err != nil {
+		if c.Param("id") != "new" && l.ID != id {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if l.ID == nil || l.Distance == nil || l.Country == nil || l.City == nil || l.Place == nil {
+		if len(t.Country) > 0 {
+			u, _ := strconv.Unquote(string(t.Country))
+			l.Country = strings.Trim(u, "\"")
+		}
+		if utf8.RuneCountInString(l.Country) > 50 {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if c.Param("id") != "new" && *l.ID != id {
+		if len(t.City) > 0 {
+			u, _ := strconv.Unquote(string(t.City))
+			l.City = strings.Trim(u, "\"")
+		}
+		if utf8.RuneCountInString(l.City) > 50 {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 
-		if utf8.RuneCountInString(*l.Country) > 50 || utf8.RuneCountInString(*l.Country) <= 0 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
+		if len(t.Place) > 0 {
+			u, _ := strconv.Unquote(string(t.Place))
+			l.Place = strings.Trim(u, "\"")
 		}
 
-		if utf8.RuneCountInString(*l.City) > 50 || utf8.RuneCountInString(*l.City) <= 0 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-		if utf8.RuneCountInString(*l.Place) <= 0 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
+		if len(t.Distance) > 0 {
+			l.Distance, err = strconv.Atoi(string(t.Distance))
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, struct{}{})
+			}
 		}
 
-		mutex := &sync.RWMutex{}
-		mutex.Lock()
-		Db.Locations[*l.ID] = l
-		mutex.Unlock()
+		Db.Locations[l.ID] = l
 
 		return c.JSON(http.StatusOK, struct{}{})
 	})
@@ -546,9 +655,9 @@ func main() {
 
 			for _, value := range recs {
 				v = append(v, ShortVisit{
-					*value.Mark,
-					*value.Visited,
-					*Db.Locations[*value.Location].Place,
+					value.Mark,
+					value.Visited,
+					Db.Locations[value.Location].Place,
 				})
 			}
 			sort.Sort(ByVisited(v))
@@ -579,7 +688,7 @@ func main() {
 			}
 
 			for _, rec := range recs {
-				sum += *rec.Mark
+				sum += rec.Mark
 				count++
 			}
 
