@@ -23,14 +23,14 @@ import (
 const zipPath = "/tmp/data/data.zip"
 
 // 3 files with data
-//const dataPath = "/root/data/"
+const dataPath = "/root/data/"
 
-const dataPath = "/tmp/data/data/"
+//const dataPath = "/tmp/data/data/"
 
 // port
-//const port = ":80"
+const port = ":80"
 
-const port = ":8080"
+//const port = ":8080"
 
 var dataMap = map[string]string{
 	"locations": "locations_%d.json",
@@ -89,8 +89,54 @@ type Database struct {
 	Locations      map[int]Location
 	Users          map[int]User
 	Visits         map[int]Visit
-	UserVisit      map[int][]Visit
-	LocationVisits map[int][]Visit
+	UserVisit      map[int]map[int]bool
+	LocationVisits map[int]map[int]bool
+}
+
+// ValidateFilter validates passed filters
+func (d Database) ValidateFilter(q url.Values) error {
+	if len(q.Get("fromDate")) > 0 {
+		v, err := strconv.Atoi(q.Get("fromDate"))
+		if err != nil {
+			return fmt.Errorf("Wrong from date %s", v)
+		}
+	}
+
+	if len(q.Get("toDate")) > 0 {
+		v, err := strconv.Atoi(q.Get("toDate"))
+		if err != nil {
+			return fmt.Errorf("Wrong to date %s", v)
+		}
+	}
+
+	if len(q.Get("fromAge")) > 0 {
+		v, err := strconv.Atoi(q.Get("fromAge"))
+		if err != nil {
+			return fmt.Errorf("Wrong from age %s", v)
+		}
+	}
+
+	if len(q.Get("toAge")) > 0 {
+		v, err := strconv.Atoi(q.Get("toAge"))
+		if err != nil {
+			return fmt.Errorf("Wrong to age %s", v)
+		}
+	}
+
+	if len(q.Get("gender")) > 0 {
+		v := q.Get("gender")
+		if v != "m" && v != "f" {
+			return fmt.Errorf("Wrong gender %s", v)
+		}
+	}
+
+	if len(q.Get("toDistance")) > 0 {
+		v, err := strconv.Atoi(q.Get("toDistance"))
+		if err != nil {
+			return fmt.Errorf("Wrong distance %s", v)
+		}
+	}
+	return nil
 }
 
 // Filter visits in database
@@ -315,13 +361,19 @@ func main() {
 		}
 		log.Printf("Total %d visits", len(Db.Visits))
 
-		Db.UserVisit = make(map[int][]Visit)
-		Db.LocationVisits = make(map[int][]Visit)
+		Db.UserVisit = make(map[int]map[int]bool)
+		Db.LocationVisits = make(map[int]map[int]bool)
 
 		for _, value := range Db.Visits {
-			Db.UserVisit[value.User] = append(Db.UserVisit[value.User], value)
+			if _, ok := Db.UserVisit[value.User]; !ok {
+				Db.UserVisit[value.User] = make(map[int]bool)
+			}
+			Db.UserVisit[value.User][value.ID] = true
 
-			Db.LocationVisits[value.Location] = append(Db.LocationVisits[value.Location], value)
+			if _, ok := Db.LocationVisits[value.Location]; !ok {
+				Db.LocationVisits[value.Location] = make(map[int]bool)
+			}
+			Db.LocationVisits[value.Location][value.ID] = true
 		}
 		log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
 		log.Print("Data ready")
@@ -365,6 +417,8 @@ func main() {
 		mutex.Lock()
 		defer mutex.Unlock()
 
+		var oldUser, oldLocation int
+
 		if c.Param("id") == "new" {
 			v = Visit{}
 		} else {
@@ -383,6 +437,9 @@ func main() {
 			return c.JSON(http.StatusBadRequest, struct{}{})
 		}
 		if len(t.User) > 0 {
+			if v.User > 0 {
+				oldUser = v.User
+			}
 			v.User, err = strconv.Atoi(string(t.User))
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, struct{}{})
@@ -394,6 +451,9 @@ func main() {
 		}
 
 		if len(t.Location) > 0 {
+			if v.Location > 0 {
+				oldLocation = v.Location
+			}
 			v.Location, err = strconv.Atoi(string(t.Location))
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, struct{}{})
@@ -430,10 +490,25 @@ func main() {
 
 			v.Distance = Db.Locations[v.Location].Distance
 			v.Country = Db.Locations[v.Location].Country
+		} else {
+			if oldUser > 0 {
+				delete(Db.UserVisit[v.User], oldUser)
+			}
+
+			if oldLocation > 0 {
+				delete(Db.LocationVisits[v.Location], oldLocation)
+			}
 		}
 
-		Db.UserVisit[v.User] = append(Db.UserVisit[v.User], v)
-		Db.LocationVisits[v.Location] = append(Db.LocationVisits[v.Location], v)
+		if _, ok := Db.UserVisit[v.User]; !ok {
+			Db.UserVisit[v.User] = make(map[int]bool)
+		}
+		Db.UserVisit[v.User][v.ID] = true
+
+		if _, ok := Db.LocationVisits[v.Location]; !ok {
+			Db.LocationVisits[v.Location] = make(map[int]bool)
+		}
+		Db.LocationVisits[v.Location][v.ID] = true
 
 		Db.Visits[v.ID] = v
 
@@ -647,8 +722,26 @@ func main() {
 		}
 		v := make([]ShortVisit, 0)
 
+		if err := Db.ValidateFilter(c.QueryParams()); err != nil {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
 		if _, ok := Db.UserVisit[id]; ok {
-			recs, err := Db.FilterVisits(c.QueryParams(), Db.UserVisit[id])
+			// build visits array
+			var vs []Visit
+			for vID := range Db.UserVisit[id] {
+				t := Db.Visits[vID]
+
+				bd := time.Unix(Db.Users[t.User].Birthday, 0)
+				t.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
+				t.Gender = Db.Users[t.User].Gender
+
+				t.Distance = Db.Locations[t.Location].Distance
+				t.Country = Db.Locations[t.Location].Country
+
+				vs = append(vs, t)
+			}
+			recs, err := Db.FilterVisits(c.QueryParams(), vs)
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, struct{}{})
 			}
@@ -662,10 +755,14 @@ func main() {
 			}
 			sort.Sort(ByVisited(v))
 		}
-
-		return c.JSON(http.StatusOK, struct {
+		r := struct {
 			Visits []ShortVisit `json:"visits"`
-		}{v})
+		}{v}
+
+		response, _ := json.Marshal(r)
+		c.Response().Header().Set("Content-Length", strconv.Itoa(len(response)))
+
+		return c.JSONBlob(http.StatusOK, response)
 	})
 
 	e.Get("/locations/:id/avg", func(c echo.Context) error {
@@ -681,8 +778,25 @@ func main() {
 			return c.JSON(http.StatusNotFound, struct{}{})
 		}
 
+		if err := Db.ValidateFilter(c.QueryParams()); err != nil {
+			return c.JSON(http.StatusBadRequest, struct{}{})
+		}
+
 		if _, ok := Db.LocationVisits[id]; ok {
-			recs, err := Db.FilterVisits(c.QueryParams(), Db.LocationVisits[id])
+			var vs []Visit
+			for vID := range Db.LocationVisits[id] {
+				t := Db.Visits[vID]
+
+				bd := time.Unix(Db.Users[t.User].Birthday, 0)
+				t.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
+				t.Gender = Db.Users[t.User].Gender
+
+				t.Distance = Db.Locations[t.Location].Distance
+				t.Country = Db.Locations[t.Location].Country
+
+				vs = append(vs, t)
+			}
+			recs, err := Db.FilterVisits(c.QueryParams(), vs)
 			if err != nil {
 				return c.JSON(http.StatusBadRequest, struct{}{})
 			}
@@ -709,8 +823,6 @@ func main() {
 	})
 
 	log.Print("Start server")
-
 	// run server
 	e.Run(standard.New(port))
-
 }
