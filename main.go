@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/engine/standard"
+	"github.com/buaazp/fasthttprouter"
 	"github.com/mholt/archiver"
 	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fasthttp"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -89,151 +90,107 @@ type Database struct {
 	Locations      map[int]Location
 	Users          map[int]User
 	Visits         map[int]Visit
-	UserVisit      map[int]map[int]bool
-	LocationVisits map[int]map[int]bool
+	UserVisit      map[int]map[int]int
+	LocationVisits map[int]map[int]int
 }
 
 // ValidateFilter validates passed filters
-func (d Database) ValidateFilter(q url.Values) error {
-	if len(q.Get("fromDate")) > 0 {
-		v, err := strconv.Atoi(q.Get("fromDate"))
+func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, error) {
+	conditions := make(map[string]interface{})
+
+	if args.Has("fromDate") {
+		v, err := strconv.Atoi(string(args.Peek("fromDate")))
 		if err != nil {
-			return fmt.Errorf("Wrong from date %s", v)
+			return nil, fmt.Errorf("Wrong from date %s", v)
 		}
+		conditions["fromDate"] = v
 	}
 
-	if len(q.Get("toDate")) > 0 {
-		v, err := strconv.Atoi(q.Get("toDate"))
+	if args.Has("toDate") {
+		v, err := strconv.Atoi(string(args.Peek("toDate")))
 		if err != nil {
-			return fmt.Errorf("Wrong to date %s", v)
+			return nil, fmt.Errorf("Wrong to date %s", v)
 		}
+		conditions["toDate"] = v
 	}
 
-	if len(q.Get("fromAge")) > 0 {
-		v, err := strconv.Atoi(q.Get("fromAge"))
+	if args.Has("fromAge") {
+		v, err := strconv.Atoi(string(args.Peek("fromAge")))
 		if err != nil {
-			return fmt.Errorf("Wrong from age %s", v)
+			return nil, fmt.Errorf("Wrong from age %s", v)
 		}
+		conditions["fromAge"] = v
 	}
 
-	if len(q.Get("toAge")) > 0 {
-		v, err := strconv.Atoi(q.Get("toAge"))
+	if args.Has("toAge") {
+		v, err := strconv.Atoi(string(args.Peek("toAge")))
 		if err != nil {
-			return fmt.Errorf("Wrong to age %s", v)
+			return nil, fmt.Errorf("Wrong to age %s", v)
 		}
+		conditions["toAge"] = v
 	}
 
-	if len(q.Get("gender")) > 0 {
-		v := q.Get("gender")
+	if args.Has("gender") {
+		v := string(args.Peek("gender"))
 		if v != "m" && v != "f" {
-			return fmt.Errorf("Wrong gender %s", v)
+			return nil, fmt.Errorf("Wrong gender %s", v)
 		}
+		conditions["gender"] = v
+	}
+	if args.Has("country") {
+		v, _ := url.QueryUnescape(string(args.Peek("country")))
+		conditions["country"] = v
 	}
 
-	if len(q.Get("toDistance")) > 0 {
-		v, err := strconv.Atoi(q.Get("toDistance"))
+	if args.Has("toDistance") {
+		v, err := strconv.Atoi(string(args.Peek("toDistance")))
 		if err != nil {
-			return fmt.Errorf("Wrong distance %s", v)
+			return nil, fmt.Errorf("Wrong distance %s", v)
 		}
+		conditions["toDistance"] = v
 	}
-	return nil
+
+	return conditions, nil
 }
 
 // Filter visits in database
-func (d Database) FilterVisits(q url.Values, recs []Visit) ([]Visit, error) {
-	var fromDate, toDate, fromAge, toAge, toDistance int
-	var gender, country string
-
-	var err error
-	conditions := make(map[string]int)
-
-	if len(q.Get("fromDate")) > 0 {
-		fromDate, err = strconv.Atoi(q.Get("fromDate"))
-		if err != nil {
-			return nil, fmt.Errorf("Wrong from date %s", fromDate)
-		}
-		conditions["fromDate"] = fromDate
-	}
-
-	if len(q.Get("toDate")) > 0 {
-		toDate, err = strconv.Atoi(q.Get("toDate"))
-		if err != nil {
-			return nil, fmt.Errorf("Wrong to date %s", toDate)
-		}
-		conditions["toDate"] = toDate
-	}
-
-	if len(q.Get("fromAge")) > 0 {
-		fromAge, err = strconv.Atoi(q.Get("fromAge"))
-		if err != nil {
-			return nil, fmt.Errorf("Wrong from age %s", fromAge)
-		}
-		conditions["fromAge"] = fromAge
-	}
-
-	if len(q.Get("toAge")) > 0 {
-		toAge, err = strconv.Atoi(q.Get("toAge"))
-		if err != nil {
-			return nil, fmt.Errorf("Wrong to age %s", toAge)
-		}
-		conditions["toAge"] = toAge
-	}
-
-	if len(q.Get("gender")) > 0 {
-		gender = q.Get("gender")
-		if gender != "m" && gender != "f" {
-			return nil, fmt.Errorf("Wrong gender %s", gender)
-		}
-	}
-
-	if len(q.Get("country")) > 0 {
-		country, _ = url.QueryUnescape(q.Get("country"))
-	}
-
-	if len(q.Get("toDistance")) > 0 {
-		toDistance, err = strconv.Atoi(q.Get("toDistance"))
-		if err != nil {
-			return nil, fmt.Errorf("Wrong distance %s", toDistance)
-		}
-		conditions["toDistance"] = toDistance
-	}
-
+func (d Database) FilterVisits(conditions map[string]interface{}, recs []Visit) []Visit {
 	var out []Visit
+
 	for _, rec := range recs {
 		if v, ok := conditions["fromDate"]; ok {
-			if rec.Visited < v {
+			if rec.Visited < v.(int) {
 				continue
 			}
 		}
 		if v, ok := conditions["toDate"]; ok {
-			if rec.Visited > v {
+			if rec.Visited > v.(int) {
 				continue
 			}
 		}
 		if v, ok := conditions["fromAge"]; ok {
-			if rec.Age < v {
+			if rec.Age <= v.(int) {
 				continue
 			}
 		}
 		if v, ok := conditions["toAge"]; ok {
-			if rec.Age >= v {
+			if rec.Age >= v.(int) {
 				continue
 			}
 		}
 		if v, ok := conditions["toDistance"]; ok {
-			if rec.Distance >= v {
+			if rec.Distance >= v.(int) {
+				continue
+			}
+		}
+		if v, ok := conditions["gender"]; ok {
+			if rec.Gender != v.(string) {
 				continue
 			}
 		}
 
-		if gender != "" {
-			if rec.Gender != gender {
-				continue
-			}
-		}
-
-		if country != "" {
-			if rec.Country != country {
+		if v, ok := conditions["country"]; ok {
+			if rec.Country != v.(string) {
 				continue
 			}
 		}
@@ -241,7 +198,7 @@ func (d Database) FilterVisits(q url.Values, recs []Visit) ([]Visit, error) {
 		out = append(out, rec)
 	}
 
-	return out, nil
+	return out
 }
 
 func loadData(path string, v interface{}) error {
@@ -276,6 +233,32 @@ func (v ByVisited) Less(i, j int) bool {
 	return v[i].Visited < v[j].Visited
 }
 
+var NOW int64
+
+func calcAge(now int64, bd int64) int {
+	diff := now - bd
+	t := time.Unix(diff, 0)
+	y, _, _ := t.Date()
+
+	//log.Printf("Age: %d %d %d %d %d", now, bd, diff, y, y-1970)
+
+	return y - 1970
+}
+
+func ErrorResponse(c *fasthttp.RequestCtx, code int) {
+	c.Response.Header.Set("Content-Type", "application/json")
+	c.Response.SetStatusCode(code)
+	c.Write([]byte(`{}`))
+	c.SetConnectionClose()
+}
+
+func OkResponse(c *fasthttp.RequestCtx, body []byte) {
+	c.Response.Header.Set("Content-Type", "application/json")
+	c.Response.SetStatusCode(fasthttp.StatusOK)
+	c.Write(body)
+	c.SetConnectionClose()
+}
+
 func main() {
 	var (
 		ls []Location
@@ -285,455 +268,199 @@ func main() {
 	var Db Database
 
 	// prepare database
-	go func() {
-		// unzip
-		err := archiver.Zip.Open(zipPath, dataPath)
-		if err != nil {
-			panic(err)
+	// unzip
+	err := archiver.Zip.Open(zipPath, dataPath)
+	if err != nil {
+		panic(err)
+	}
+	// load timestamp
+	f, err := os.Open(dataPath + "options.txt")
+	if err == nil {
+		// Start reading from the file with a reader.
+		reader := bufio.NewReader(f)
+		line, err := reader.ReadString('\n')
+		if err == nil {
+			tm, err := strconv.Atoi(strings.TrimRight(line, "\n"))
+			if err == nil {
+				NOW = int64(tm)
+				log.Printf("get timestamp from options.txt %d", NOW)
+			}
 		}
+		f.Close()
+	}
+	if NOW == 0 {
+		log.Printf("open fail: %s\n", dataPath+"options.txt")
+		NOW = time.Now().Unix()
+		log.Printf("get local unixtime %d", NOW)
+	}
 
-		// load data to structs
-		for key, value := range dataMap {
-			for i := 1; ; i++ {
-				path := fmt.Sprintf(dataPath+value, i)
-				if _, err := os.Stat(path); os.IsNotExist(err) {
-					log.Printf("%s not exists", path)
-					break
+	// load data to structs
+	for key, value := range dataMap {
+		for i := 1; ; i++ {
+			path := fmt.Sprintf(dataPath+value, i)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				log.Printf("%s not exists", path)
+				break
+			}
+			log.Printf("%s found. Parsing...", path)
+
+			switch key {
+			case "locations":
+				var l Locations
+				err := loadData(path, &l)
+				if err != nil {
+					panic(err)
 				}
-				log.Printf("%s found. Parsing...", path)
-
-				switch key {
-				case "locations":
-					var l Locations
-					err := loadData(path, &l)
-					if err != nil {
-						panic(err)
-					}
-					log.Printf("Loaded %d locations", len(l.Records))
-					ls = append(ls, l.Records...)
-				case "users":
-					var u Users
-					err := loadData(path, &u)
-					if err != nil {
-						panic(err)
-					}
-					log.Printf("Loaded %d users", len(u.Records))
-					us = append(us, u.Records...)
-				case "visits":
-					var v Visits
-					err := loadData(path, &v)
-					if err != nil {
-						panic(err)
-					}
-					log.Printf("Loaded %d visits", len(v.Records))
-					vs = append(vs, v.Records...)
-				default:
-					panic(fmt.Errorf("something went wrong"))
+				log.Printf("Loaded %d locations", len(l.Records))
+				ls = append(ls, l.Records...)
+			case "users":
+				var u Users
+				err := loadData(path, &u)
+				if err != nil {
+					panic(err)
 				}
+				log.Printf("Loaded %d users", len(u.Records))
+				us = append(us, u.Records...)
+			case "visits":
+				var v Visits
+				err := loadData(path, &v)
+				if err != nil {
+					panic(err)
+				}
+				log.Printf("Loaded %d visits", len(v.Records))
+				vs = append(vs, v.Records...)
+			default:
+				panic(fmt.Errorf("something went wrong"))
 			}
 		}
+	}
 
-		log.Print("Data loaded")
+	log.Print("Data loaded")
 
-		// init maps
-		Db.Locations = make(map[int]Location)
-		for _, r := range ls {
-			Db.Locations[r.ID] = r
+	// init maps
+	Db.Locations = make(map[int]Location)
+	for _, r := range ls {
+		Db.Locations[r.ID] = r
+	}
+	log.Printf("Total %d locs", len(Db.Locations))
+
+	Db.Users = make(map[int]User)
+	for _, r := range us {
+		Db.Users[r.ID] = r
+	}
+	log.Printf("Total %d users", len(Db.Users))
+
+	Db.Visits = make(map[int]Visit)
+	for _, r := range vs {
+		r.Age = calcAge(NOW, Db.Users[r.User].Birthday)
+
+		r.Gender = Db.Users[r.User].Gender
+
+		r.Distance = Db.Locations[r.Location].Distance
+		r.Country = Db.Locations[r.Location].Country
+
+		Db.Visits[r.ID] = r
+	}
+	log.Printf("Total %d visits", len(Db.Visits))
+
+	Db.UserVisit = make(map[int]map[int]int)
+	Db.LocationVisits = make(map[int]map[int]int)
+
+	for _, value := range Db.Visits {
+		if _, ok := Db.UserVisit[value.User]; !ok {
+			Db.UserVisit[value.User] = make(map[int]int)
 		}
-		log.Printf("Total %d locs", len(Db.Locations))
+		Db.UserVisit[value.User][value.ID]++
 
-		Db.Users = make(map[int]User)
-		for _, r := range us {
-			Db.Users[r.ID] = r
+		if _, ok := Db.LocationVisits[value.Location]; !ok {
+			Db.LocationVisits[value.Location] = make(map[int]int)
 		}
-		log.Printf("Total %d users", len(Db.Users))
+		Db.LocationVisits[value.Location][value.ID]++
+	}
+	log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
+	log.Print("Data ready")
 
-		Db.Visits = make(map[int]Visit)
-		for _, r := range vs {
-			bd := time.Unix(Db.Users[r.User].Birthday, 0)
-			r.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
-			r.Gender = Db.Users[r.User].Gender
+	router := fasthttprouter.New()
 
-			r.Distance = Db.Locations[r.Location].Distance
-			r.Country = Db.Locations[r.Location].Country
+	router.GET("/users/:id", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
 
-			Db.Visits[r.ID] = r
-		}
-		log.Printf("Total %d visits", len(Db.Visits))
-
-		Db.UserVisit = make(map[int]map[int]bool)
-		Db.LocationVisits = make(map[int]map[int]bool)
-
-		for _, value := range Db.Visits {
-			if _, ok := Db.UserVisit[value.User]; !ok {
-				Db.UserVisit[value.User] = make(map[int]bool)
-			}
-			Db.UserVisit[value.User][value.ID] = true
-
-			if _, ok := Db.LocationVisits[value.Location]; !ok {
-				Db.LocationVisits[value.Location] = make(map[int]bool)
-			}
-			Db.LocationVisits[value.Location][value.ID] = true
-		}
-		log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
-		log.Print("Data ready")
-	}()
-
-	e := echo.New()
-
-	e.Get("/visits/:id", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
+		}
+		if _, ok := Db.Users[id]; !ok {
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
 		}
 
+		response, _ := json.Marshal(Db.Users[id])
+		OkResponse(c, response)
+		return
+	})
+
+	router.GET("/visits/:id", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
+
+		if err != nil {
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
+		}
 		if _, ok := Db.Visits[id]; !ok {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
 		}
-		return c.JSON(http.StatusOK, Db.Visits[id])
+
+		response, _ := json.Marshal(Db.Visits[id])
+		OkResponse(c, response)
+		return
 	})
 
-	e.Post("/visits/:id", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
-		if c.Param("id") != "new" && err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
-		}
-		var v Visit
-		var t struct {
-			ID       json.RawMessage `json:"id"`
-			User     json.RawMessage `json:"user"`
-			Location json.RawMessage `json:"location"`
-			Visited  json.RawMessage `json:"visited_at"`
-			Mark     json.RawMessage `json:"mark"`
-		}
+	router.GET("/locations/:id", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
 
-		if err := c.Bind(&t); err != nil {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-		if string(t.ID) == "null" || string(t.User) == "null" || string(t.Location) == "null" || string(t.Visited) == "null" || string(t.Mark) == "null" {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-		mutex := &sync.RWMutex{}
-		mutex.Lock()
-		defer mutex.Unlock()
-
-		var oldUser, oldLocation int
-
-		if c.Param("id") == "new" {
-			v = Visit{}
-		} else {
-			if _, ok := Db.Visits[id]; !ok {
-				return c.JSON(http.StatusNotFound, struct{}{})
-			}
-			v = Db.Visits[id]
-		}
-		if len(t.ID) > 0 {
-			v.ID, err = strconv.Atoi(string(t.ID))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-		if c.Param("id") != "new" && v.ID != id {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-		if len(t.User) > 0 {
-			if v.User > 0 {
-				oldUser = v.User
-			}
-			v.User, err = strconv.Atoi(string(t.User))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-
-		if _, ok := Db.Users[v.User]; !ok {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Location) > 0 {
-			if v.Location > 0 {
-				oldLocation = v.Location
-			}
-			v.Location, err = strconv.Atoi(string(t.Location))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-		if _, ok := Db.Locations[v.Location]; !ok {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Visited) > 0 {
-			v.Visited, err = strconv.Atoi(string(t.Visited))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-		if v.Visited < 946684800 || v.Visited > 1420156799 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Mark) > 0 {
-			v.Mark, err = strconv.Atoi(string(t.Mark))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-		if v.Mark < 0 || v.Mark > 5 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if c.Param("id") == "new" {
-			bd := time.Unix(Db.Users[v.User].Birthday, 0)
-			v.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
-			v.Gender = Db.Users[v.User].Gender
-
-			v.Distance = Db.Locations[v.Location].Distance
-			v.Country = Db.Locations[v.Location].Country
-		} else {
-			if oldUser > 0 {
-				delete(Db.UserVisit[v.User], oldUser)
-			}
-
-			if oldLocation > 0 {
-				delete(Db.LocationVisits[v.Location], oldLocation)
-			}
-		}
-
-		if _, ok := Db.UserVisit[v.User]; !ok {
-			Db.UserVisit[v.User] = make(map[int]bool)
-		}
-		Db.UserVisit[v.User][v.ID] = true
-
-		if _, ok := Db.LocationVisits[v.Location]; !ok {
-			Db.LocationVisits[v.Location] = make(map[int]bool)
-		}
-		Db.LocationVisits[v.Location][v.ID] = true
-
-		Db.Visits[v.ID] = v
-
-		return c.JSON(http.StatusOK, struct{}{})
-	})
-
-	e.Post("/users/:id", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
-		if c.Param("id") != "new" && err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
-		}
-		var u User
-
-		var t struct {
-			ID        json.RawMessage `json:"id"`
-			FirstName json.RawMessage `json:"first_name"`
-			LastName  json.RawMessage `json:"last_name"`
-			Email     json.RawMessage `json:"email"`
-			Gender    json.RawMessage `json:"gender"`
-			Birthday  json.RawMessage `json:"birth_date"`
-		}
-
-		if err := c.Bind(&t); err != nil {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if string(t.ID) == "null" || string(t.Gender) == "null" || string(t.Birthday) == "null" || string(t.FirstName) == "null" || string(t.LastName) == "null" || string(t.Email) == "null" {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		mutex := &sync.RWMutex{}
-		mutex.Lock()
-		defer mutex.Unlock()
-
-		if c.Param("id") != "new" {
-			if _, ok := Db.Users[id]; !ok {
-				return c.JSON(http.StatusNotFound, struct{}{})
-			}
-			u = Db.Users[id]
-		} else {
-			u = User{}
-		}
-		if len(t.ID) > 0 {
-			u.ID, err = strconv.Atoi(string(t.ID))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-		if c.Param("id") != "new" && u.ID != id {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.FirstName) > 0 {
-			f, _ := strconv.Unquote(string(t.FirstName))
-			u.FirstName = strings.Trim(f, "\"")
-		}
-		if utf8.RuneCountInString(u.FirstName) > 50 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.LastName) > 0 {
-			l, _ := strconv.Unquote(string(t.LastName))
-			u.LastName = strings.Trim(l, "\"")
-		}
-		if utf8.RuneCountInString(u.LastName) > 50 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Gender) > 0 {
-			g, _ := strconv.Unquote(string(t.Gender))
-			u.Gender = strings.Trim(g, "\"")
-		}
-		if u.Gender != "f" && u.Gender != "m" {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Birthday) > 0 {
-			u.Birthday, err = strconv.ParseInt(string(t.Birthday), 10, 64)
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-
-		if u.Birthday < -1262304000 || u.Birthday > 915235199 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Email) > 0 {
-			e, _ := strconv.Unquote(string(t.Email))
-			u.Email = strings.Trim(e, "\"")
-		}
-		if utf8.RuneCountInString(u.Email) > 100 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		Db.Users[u.ID] = u
-
-		return c.JSON(http.StatusOK, struct{}{})
-	})
-
-	e.Post("/locations/:id", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
-		if c.Param("id") != "new" && err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
-		}
-		var l Location
-		var t struct {
-			ID       json.RawMessage `json:"id"`
-			Distance json.RawMessage `json:"distance"`
-			Country  json.RawMessage `json:"country"`
-			City     json.RawMessage `json:"city"`
-			Place    json.RawMessage `json:"place"`
-		}
-		if err := c.Bind(&t); err != nil {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-		if string(t.ID) == "null" || string(t.Distance) == "null" || string(t.Country) == "null" || string(t.City) == "null" || string(t.Place) == "null" {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		mutex := &sync.RWMutex{}
-		mutex.Lock()
-		defer mutex.Unlock()
-
-		if c.Param("id") == "new" {
-			l = Location{}
-		} else {
-			if _, ok := Db.Locations[id]; !ok {
-				return c.JSON(http.StatusNotFound, struct{}{})
-			}
-			l = Db.Locations[id]
-		}
-		if len(t.ID) > 0 {
-			l.ID, err = strconv.Atoi(string(t.ID))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-
-		if c.Param("id") != "new" && l.ID != id {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Country) > 0 {
-			u, _ := strconv.Unquote(string(t.Country))
-			l.Country = strings.Trim(u, "\"")
-		}
-		if utf8.RuneCountInString(l.Country) > 50 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.City) > 0 {
-			u, _ := strconv.Unquote(string(t.City))
-			l.City = strings.Trim(u, "\"")
-		}
-		if utf8.RuneCountInString(l.City) > 50 {
-			return c.JSON(http.StatusBadRequest, struct{}{})
-		}
-
-		if len(t.Place) > 0 {
-			u, _ := strconv.Unquote(string(t.Place))
-			l.Place = strings.Trim(u, "\"")
-		}
-
-		if len(t.Distance) > 0 {
-			l.Distance, err = strconv.Atoi(string(t.Distance))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
-		}
-
-		Db.Locations[l.ID] = l
-
-		return c.JSON(http.StatusOK, struct{}{})
-	})
-
-	e.Get("/locations/:id", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
 		}
-
 		if _, ok := Db.Locations[id]; !ok {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
 		}
 
-		return c.JSON(http.StatusOK, Db.Locations[id])
+		response, _ := json.Marshal(Db.Locations[id])
+		OkResponse(c, response)
+		return
 	})
 
-	e.Get("/users/:id", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
+	router.GET("/users/:id/visits", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
 		if err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, http.StatusNotFound)
+			return
 		}
 
 		if _, ok := Db.Users[id]; !ok {
-			return c.JSON(http.StatusNotFound, struct{}{})
-		}
-
-		return c.JSON(http.StatusOK, Db.Users[id])
-	})
-
-	e.Get("/users/:id/visits", func(c echo.Context) error {
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			return c.JSON(http.StatusNotFound, struct{}{})
-		}
-
-		if _, ok := Db.Users[id]; !ok {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, http.StatusNotFound)
+			return
 		}
 		v := make([]ShortVisit, 0)
-
-		if err := Db.ValidateFilter(c.QueryParams()); err != nil {
-			return c.JSON(http.StatusBadRequest, struct{}{})
+		filters, err := Db.ParseFilters(c.QueryArgs())
+		if err != nil {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
 		}
 
 		if _, ok := Db.UserVisit[id]; ok {
-			// build visits array
 			var vs []Visit
-			for vID := range Db.UserVisit[id] {
+			for vID, cnt := range Db.UserVisit[id] {
+				if cnt <= 0 {
+					continue
+				}
+
 				t := Db.Visits[vID]
 
-				bd := time.Unix(Db.Users[t.User].Birthday, 0)
-				t.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
+				t.Age = calcAge(NOW, Db.Users[t.User].Birthday)
 				t.Gender = Db.Users[t.User].Gender
 
 				t.Distance = Db.Locations[t.Location].Distance
@@ -741,10 +468,7 @@ func main() {
 
 				vs = append(vs, t)
 			}
-			recs, err := Db.FilterVisits(c.QueryParams(), vs)
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
-			}
+			recs := Db.FilterVisits(filters, vs)
 
 			for _, value := range recs {
 				v = append(v, ShortVisit{
@@ -760,35 +484,40 @@ func main() {
 		}{v}
 
 		response, _ := json.Marshal(r)
-		c.Response().Header().Set("Content-Length", strconv.Itoa(len(response)))
-
-		return c.JSONBlob(http.StatusOK, response)
+		OkResponse(c, response)
+		return
 	})
 
-	e.Get("/locations/:id/avg", func(c echo.Context) error {
+	router.GET("/locations/:id/avg", func(c *fasthttp.RequestCtx) {
 		var sum, count int
 		var avg float64
 
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil || id <= 0 {
-			return c.JSON(http.StatusNotFound, struct{}{})
+		id, err := strconv.Atoi(c.UserValue("id").(string))
+		if err != nil {
+			ErrorResponse(c, http.StatusNotFound)
+			return
 		}
 
 		if _, ok := Db.Locations[id]; !ok {
-			return c.JSON(http.StatusNotFound, struct{}{})
+			ErrorResponse(c, http.StatusNotFound)
+			return
 		}
 
-		if err := Db.ValidateFilter(c.QueryParams()); err != nil {
-			return c.JSON(http.StatusBadRequest, struct{}{})
+		filters, err := Db.ParseFilters(c.QueryArgs())
+		if err != nil {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
 		}
 
 		if _, ok := Db.LocationVisits[id]; ok {
 			var vs []Visit
-			for vID := range Db.LocationVisits[id] {
+			for vID, cnt := range Db.LocationVisits[id] {
+				if cnt <= 0 {
+					continue
+				}
 				t := Db.Visits[vID]
 
-				bd := time.Unix(Db.Users[t.User].Birthday, 0)
-				t.Age = int(time.Since(bd) / (time.Hour * 24 * 365))
+				t.Age = calcAge(NOW, Db.Users[t.User].Birthday)
 				t.Gender = Db.Users[t.User].Gender
 
 				t.Distance = Db.Locations[t.Location].Distance
@@ -796,9 +525,10 @@ func main() {
 
 				vs = append(vs, t)
 			}
-			recs, err := Db.FilterVisits(c.QueryParams(), vs)
+			recs := Db.FilterVisits(filters, vs)
 			if err != nil {
-				return c.JSON(http.StatusBadRequest, struct{}{})
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
 			}
 
 			for _, rec := range recs {
@@ -817,12 +547,333 @@ func main() {
 			}
 		}
 
-		return c.JSON(http.StatusOK, struct {
+		response, _ := json.Marshal(struct {
 			Avg float64 `json:"avg"`
 		}{avg})
+
+		OkResponse(c, response)
+		return
+	})
+
+	router.POST("/users/:id", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
+
+		if c.UserValue("id").(string) != "new" && err != nil {
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
+		}
+
+		var u User
+
+		var t struct {
+			ID        json.RawMessage `json:"id"`
+			FirstName json.RawMessage `json:"first_name"`
+			LastName  json.RawMessage `json:"last_name"`
+			Email     json.RawMessage `json:"email"`
+			Gender    json.RawMessage `json:"gender"`
+			Birthday  json.RawMessage `json:"birth_date"`
+		}
+		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if string(t.ID) == "null" || string(t.Gender) == "null" || string(t.Birthday) == "null" || string(t.FirstName) == "null" || string(t.LastName) == "null" || string(t.Email) == "null" {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if c.UserValue("id").(string) != "new" {
+			if _, ok := Db.Users[id]; !ok {
+				ErrorResponse(c, fasthttp.StatusNotFound)
+				return
+			}
+			u = Db.Users[id]
+		} else {
+			u = User{}
+		}
+		if len(t.ID) > 0 {
+			u.ID, err = strconv.Atoi(string(t.ID))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+		if c.UserValue("id").(string) != "new" && u.ID != id {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.FirstName) > 0 {
+			f, _ := strconv.Unquote(string(t.FirstName))
+			u.FirstName = strings.Trim(f, "\"")
+		}
+		if utf8.RuneCountInString(u.FirstName) > 50 {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.LastName) > 0 {
+			l, _ := strconv.Unquote(string(t.LastName))
+			u.LastName = strings.Trim(l, "\"")
+		}
+		if utf8.RuneCountInString(u.LastName) > 50 {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Gender) > 0 {
+			g, _ := strconv.Unquote(string(t.Gender))
+			u.Gender = strings.Trim(g, "\"")
+		}
+		if u.Gender != "f" && u.Gender != "m" {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Birthday) > 0 {
+			u.Birthday, err = strconv.ParseInt(string(t.Birthday), 10, 64)
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+
+		if u.Birthday < -1262304000 || u.Birthday > 915235199 {
+			ErrorResponse(c, http.StatusBadRequest)
+			return
+		}
+
+		if len(t.Email) > 0 {
+			e, _ := strconv.Unquote(string(t.Email))
+			u.Email = strings.Trim(e, "\"")
+		}
+		if utf8.RuneCountInString(u.Email) > 100 {
+			ErrorResponse(c, http.StatusBadRequest)
+			return
+		}
+		Db.Users[u.ID] = u
+
+		OkResponse(c, []byte(`{}`))
+		return
+	})
+
+	router.POST("/visits/:id", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
+
+		if c.UserValue("id").(string) != "new" && err != nil {
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
+		}
+
+		var v Visit
+		var t struct {
+			ID       json.RawMessage `json:"id"`
+			User     json.RawMessage `json:"user"`
+			Location json.RawMessage `json:"location"`
+			Visited  json.RawMessage `json:"visited_at"`
+			Mark     json.RawMessage `json:"mark"`
+		}
+
+		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if string(t.ID) == "null" || string(t.User) == "null" || string(t.Location) == "null" || string(t.Visited) == "null" || string(t.Mark) == "null" {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		var oldUser, oldLocation int
+
+		if c.UserValue("id").(string) == "new" {
+			v = Visit{}
+		} else {
+			if _, ok := Db.Visits[id]; !ok {
+				ErrorResponse(c, fasthttp.StatusNotFound)
+				return
+			}
+			v = Db.Visits[id]
+		}
+		if len(t.ID) > 0 {
+			v.ID, err = strconv.Atoi(string(t.ID))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+		if c.UserValue("id").(string) != "new" && v.ID != id {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+		if len(t.User) > 0 {
+			if v.User > 0 {
+				oldUser = v.User
+			}
+			v.User, err = strconv.Atoi(string(t.User))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+
+		if _, ok := Db.Users[v.User]; !ok {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Location) > 0 {
+			if v.Location > 0 {
+				oldLocation = v.Location
+			}
+			v.Location, err = strconv.Atoi(string(t.Location))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+		if _, ok := Db.Locations[v.Location]; !ok {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Visited) > 0 {
+			v.Visited, err = strconv.Atoi(string(t.Visited))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+		if v.Visited < 946684800 || v.Visited > 1420156799 {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Mark) > 0 {
+			v.Mark, err = strconv.Atoi(string(t.Mark))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+		if v.Mark < 0 || v.Mark > 5 {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+		go func() {
+			mutex := &sync.Mutex{}
+			mutex.Lock()
+			if _, ok := Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
+				Db.UserVisit[oldUser][v.ID]--
+			}
+
+			if _, ok := Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
+				Db.LocationVisits[oldLocation][v.ID]--
+			}
+
+			if _, ok := Db.UserVisit[v.User]; !ok {
+				Db.UserVisit[v.User] = make(map[int]int)
+			}
+			Db.UserVisit[v.User][v.ID]++
+
+			if _, ok := Db.LocationVisits[v.Location]; !ok {
+				Db.LocationVisits[v.Location] = make(map[int]int)
+			}
+			Db.LocationVisits[v.Location][v.ID]++
+
+			Db.Visits[v.ID] = v
+			mutex.Unlock()
+		}()
+
+		OkResponse(c, []byte(`{}`))
+		return
+	})
+
+	router.POST("/locations/:id", func(c *fasthttp.RequestCtx) {
+		id, err := strconv.Atoi(c.UserValue("id").(string))
+
+		if c.UserValue("id").(string) != "new" && err != nil {
+			ErrorResponse(c, fasthttp.StatusNotFound)
+			return
+		}
+		var l Location
+		var t struct {
+			ID       json.RawMessage `json:"id"`
+			Distance json.RawMessage `json:"distance"`
+			Country  json.RawMessage `json:"country"`
+			City     json.RawMessage `json:"city"`
+			Place    json.RawMessage `json:"place"`
+		}
+
+		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+		if string(t.ID) == "null" || string(t.Distance) == "null" || string(t.Country) == "null" || string(t.City) == "null" || string(t.Place) == "null" {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if c.UserValue("id").(string) == "new" {
+			l = Location{}
+		} else {
+			if _, ok := Db.Locations[id]; !ok {
+				ErrorResponse(c, fasthttp.StatusNotFound)
+				return
+			}
+			l = Db.Locations[id]
+		}
+		if len(t.ID) > 0 {
+			l.ID, err = strconv.Atoi(string(t.ID))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+
+		if c.UserValue("id").(string) != "new" && l.ID != id {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Country) > 0 {
+			u, _ := strconv.Unquote(string(t.Country))
+			l.Country = strings.Trim(u, "\"")
+		}
+		if utf8.RuneCountInString(l.Country) > 50 {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.City) > 0 {
+			u, _ := strconv.Unquote(string(t.City))
+			l.City = strings.Trim(u, "\"")
+		}
+		if utf8.RuneCountInString(l.City) > 50 {
+			ErrorResponse(c, fasthttp.StatusBadRequest)
+			return
+		}
+
+		if len(t.Place) > 0 {
+			u, _ := strconv.Unquote(string(t.Place))
+			l.Place = strings.Trim(u, "\"")
+		}
+
+		if len(t.Distance) > 0 {
+			l.Distance, err = strconv.Atoi(string(t.Distance))
+			if err != nil {
+				ErrorResponse(c, fasthttp.StatusBadRequest)
+				return
+			}
+		}
+		Db.Locations[l.ID] = l
+
+		OkResponse(c, []byte(`{}`))
+		return
 	})
 
 	log.Print("Start server")
 	// run server
-	e.Run(standard.New(port))
+	log.Fatal(fasthttp.ListenAndServe(port, router.Handler))
 }

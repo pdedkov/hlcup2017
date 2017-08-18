@@ -2,34 +2,34 @@
 
 
 [[projects]]
+  name = "github.com/buaazp/fasthttprouter"
+  packages = ["."]
+  revision = "ade4e2031af3aed7fffd241084aad80a58faf421"
+  version = "v0.1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/dsnet/compress"
   packages = [".","bzip2","bzip2/internal/sais","internal","internal/errors","internal/prefix"]
   revision = "0ae8e136a5df9e3caf6c0f69983608b07438411b"
 
 [[projects]]
-  name = "github.com/labstack/echo"
-  packages = [".","context","engine","engine/standard","log"]
-  revision = "e08070379af60f5b9c0fb5bb2d1527ba9624fe43"
-  version = "v2.2.0"
+  name = "github.com/klauspost/compress"
+  packages = ["flate","gzip","zlib"]
+  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
+  version = "v1.2.1"
 
 [[projects]]
-  name = "github.com/labstack/gommon"
-  packages = ["color","log"]
-  revision = "779b8a8b9850a97acba6a3fe20feb628c39e17c1"
-  version = "0.2.2"
-
-[[projects]]
-  name = "github.com/mattn/go-colorable"
+  name = "github.com/klauspost/cpuid"
   packages = ["."]
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
 
 [[projects]]
-  name = "github.com/mattn/go-isatty"
+  name = "github.com/klauspost/crc32"
   packages = ["."]
-  revision = "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
-  version = "v0.0.2"
+  revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
+  version = "v1.1"
 
 [[projects]]
   name = "github.com/mholt/archiver"
@@ -56,22 +56,10 @@
   version = "v0.5.4"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/valyala/bytebufferpool"
-  packages = ["."]
-  revision = "e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/valyala/fasttemplate"
-  packages = ["."]
-  revision = "dcecefd839c4193db0d35b88ec65b4c12d360ab0"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context"]
-  revision = "1c05540f6879653db88113bc4a2b70aec4bd491f"
+  name = "github.com/valyala/fasthttp"
+  packages = [".","fasthttputil"]
+  revision = "d42167fd04f636e20b005e9934159e95454233c7"
+  version = "v20160617"
 
 [[projects]]
   branch = "master"
@@ -82,6 +70,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7d45febda0451bd43282f2fecfe67784243f2de39d143227c0bddb503c6ed96a"
+  inputs-digest = "2872345dd97f2148e1c9607076eab4ce23c3903e4a7ebca5058e3ecc38a1eff3"
   solver-name = "gps-cdcl"
   solver-version = 1
