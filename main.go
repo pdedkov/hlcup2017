@@ -100,7 +100,7 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 	if args.Has("fromDate") {
 		v, err := strconv.Atoi(string(args.Peek("fromDate")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong from date %s", v)
+			return nil, fmt.Errorf("Wrong from date %d", v)
 		}
 		conditions["fromDate"] = v
 	}
@@ -108,7 +108,7 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 	if args.Has("toDate") {
 		v, err := strconv.Atoi(string(args.Peek("toDate")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong to date %s", v)
+			return nil, fmt.Errorf("Wrong to date %d", v)
 		}
 		conditions["toDate"] = v
 	}
@@ -116,7 +116,7 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 	if args.Has("fromAge") {
 		v, err := strconv.Atoi(string(args.Peek("fromAge")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong from age %s", v)
+			return nil, fmt.Errorf("Wrong from age %d", v)
 		}
 		conditions["fromAge"] = v
 	}
@@ -124,7 +124,7 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 	if args.Has("toAge") {
 		v, err := strconv.Atoi(string(args.Peek("toAge")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong to age %s", v)
+			return nil, fmt.Errorf("Wrong to age %d", v)
 		}
 		conditions["toAge"] = v
 	}
@@ -144,7 +144,7 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 	if args.Has("toDistance") {
 		v, err := strconv.Atoi(string(args.Peek("toDistance")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong distance %s", v)
+			return nil, fmt.Errorf("Wrong distance %d", v)
 		}
 		conditions["toDistance"] = v
 	}
@@ -768,30 +768,29 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusBadRequest)
 			return
 		}
-		go func() {
-			mutex := &sync.Mutex{}
-			mutex.Lock()
-			if _, ok := Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
-				Db.UserVisit[oldUser][v.ID]--
-			}
 
-			if _, ok := Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
-				Db.LocationVisits[oldLocation][v.ID]--
-			}
+		mutex := &sync.Mutex{}
+		mutex.Lock()
+		if _, ok := Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
+			Db.UserVisit[oldUser][v.ID]--
+		}
 
-			if _, ok := Db.UserVisit[v.User]; !ok {
-				Db.UserVisit[v.User] = make(map[int]int)
-			}
-			Db.UserVisit[v.User][v.ID]++
+		if _, ok := Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
+			Db.LocationVisits[oldLocation][v.ID]--
+		}
 
-			if _, ok := Db.LocationVisits[v.Location]; !ok {
-				Db.LocationVisits[v.Location] = make(map[int]int)
-			}
-			Db.LocationVisits[v.Location][v.ID]++
+		if _, ok := Db.UserVisit[v.User]; !ok {
+			Db.UserVisit[v.User] = make(map[int]int)
+		}
+		Db.UserVisit[v.User][v.ID]++
 
-			Db.Visits[v.ID] = v
-			mutex.Unlock()
-		}()
+		if _, ok := Db.LocationVisits[v.Location]; !ok {
+			Db.LocationVisits[v.Location] = make(map[int]int)
+		}
+		Db.LocationVisits[v.Location][v.ID]++
+
+		Db.Visits[v.ID] = v
+		mutex.Unlock()
 
 		OkResponse(c, []byte(`{}`))
 		return
