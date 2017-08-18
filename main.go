@@ -299,6 +299,7 @@ func main() {
 			log.Printf("get timestamp from mtime %d", NOW)
 		}
 	}
+	NOW = time.Now().Unix()
 
 	// load data to structs
 	for key, value := range dataMap {
