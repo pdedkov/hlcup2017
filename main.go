@@ -169,7 +169,7 @@ func (d Database) FilterVisits(conditions map[string]interface{}, recs []Visit) 
 			}
 		}
 		if v, ok := conditions["fromAge"]; ok {
-			if rec.Age < v.(int) {
+			if rec.Age <= v.(int) {
 				continue
 			}
 		}
