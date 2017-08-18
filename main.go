@@ -659,7 +659,11 @@ func main() {
 			ErrorResponse(c, http.StatusBadRequest)
 			return
 		}
+
+		mutex := &sync.Mutex{}
+		mutex.Lock()
 		Db.Users[u.ID] = u
+		mutex.Unlock()
 
 		OkResponse(c, []byte(`{}`))
 		return
@@ -874,7 +878,10 @@ func main() {
 				return
 			}
 		}
+		mutex := &sync.Mutex{}
+		mutex.Lock()
 		Db.Locations[l.ID] = l
+		mutex.Unlock()
 
 		OkResponse(c, []byte(`{}`))
 		return
