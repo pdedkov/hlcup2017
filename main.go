@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"sort"
@@ -240,8 +239,6 @@ func calcAge(now int64, bd int64) int {
 	t := time.Unix(diff, 0)
 	y, _, _ := t.Date()
 
-	//log.Printf("Age: %d %d %d %d %d", now, bd, diff, y, y-1970)
-
 	return y - 1970
 }
 
@@ -299,7 +296,6 @@ func main() {
 			log.Printf("get timestamp from mtime %d", NOW)
 		}
 	}
-	//NOW = time.Now().Unix()
 
 	// load data to structs
 	for key, value := range dataMap {
@@ -443,12 +439,12 @@ func main() {
 	router.GET("/users/:id/visits", func(c *fasthttp.RequestCtx) {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 		if err != nil {
-			ErrorResponse(c, http.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound)
 			return
 		}
 
 		if _, ok := Db.Users[id]; !ok {
-			ErrorResponse(c, http.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound)
 			return
 		}
 		v := make([]ShortVisit, 0)
@@ -501,12 +497,12 @@ func main() {
 
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 		if err != nil {
-			ErrorResponse(c, http.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound)
 			return
 		}
 
 		if _, ok := Db.Locations[id]; !ok {
-			ErrorResponse(c, http.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound)
 			return
 		}
 
@@ -647,7 +643,7 @@ func main() {
 		}
 
 		if u.Birthday < -1262304000 || u.Birthday > 915235199 {
-			ErrorResponse(c, http.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest)
 			return
 		}
 
@@ -656,7 +652,7 @@ func main() {
 			u.Email = strings.Trim(e, "\"")
 		}
 		if utf8.RuneCountInString(u.Email) > 100 {
-			ErrorResponse(c, http.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest)
 			return
 		}
 
