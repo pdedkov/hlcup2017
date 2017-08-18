@@ -289,9 +289,15 @@ func main() {
 		f.Close()
 	}
 	if NOW == 0 {
-		log.Printf("open fail: %s\n", dataPath+"options.txt")
-		NOW = time.Now().Unix()
-		log.Printf("get local unixtime %d", NOW)
+		log.Printf("open fail: %s", dataPath+"options.txt")
+		info, err := os.Stat(zipPath)
+		if err != nil {
+			NOW = time.Now().Unix()
+			log.Printf("get timestamp from time.Now() %d", NOW)
+		} else {
+			NOW = info.ModTime().Unix()
+			log.Printf("get timestamp from mtime %d", NOW)
+		}
 	}
 
 	// load data to structs
