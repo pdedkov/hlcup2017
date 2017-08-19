@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 )
@@ -242,18 +241,23 @@ func calcAge(now int64, bd int64) int {
 	return y - 1970
 }
 
-func ErrorResponse(c *fasthttp.RequestCtx, code int) {
+func ErrorResponse(c *fasthttp.RequestCtx, code int, close bool) {
 	c.Response.Header.Set("Content-Type", "application/json")
 	c.Response.SetStatusCode(code)
 	c.Write([]byte(`{}`))
-	c.SetConnectionClose()
+	if close {
+		c.SetConnectionClose()
+	}
+
 }
 
-func OkResponse(c *fasthttp.RequestCtx, body []byte) {
+func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 	c.Response.Header.Set("Content-Type", "application/json")
 	c.Response.SetStatusCode(fasthttp.StatusOK)
 	c.Write(body)
-	c.SetConnectionClose()
+	if close {
+		c.SetConnectionClose()
+	}
 }
 
 func main() {
@@ -389,16 +393,16 @@ func main() {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 		if _, ok := Db.Users[id]; !ok {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
 		response, _ := json.Marshal(Db.Users[id])
-		OkResponse(c, response)
+		OkResponse(c, response, false)
 		return
 	})
 
@@ -406,16 +410,16 @@ func main() {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 		if _, ok := Db.Visits[id]; !ok {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
 		response, _ := json.Marshal(Db.Visits[id])
-		OkResponse(c, response)
+		OkResponse(c, response, false)
 		return
 	})
 
@@ -423,34 +427,34 @@ func main() {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 		if _, ok := Db.Locations[id]; !ok {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
 		response, _ := json.Marshal(Db.Locations[id])
-		OkResponse(c, response)
+		OkResponse(c, response, false)
 		return
 	})
 
 	router.GET("/users/:id/visits", func(c *fasthttp.RequestCtx) {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
 		if _, ok := Db.Users[id]; !ok {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 		v := make([]ShortVisit, 0)
 		filters, err := Db.ParseFilters(c.QueryArgs())
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, false)
 			return
 		}
 
@@ -487,7 +491,7 @@ func main() {
 		}{v}
 
 		response, _ := json.Marshal(r)
-		OkResponse(c, response)
+		OkResponse(c, response, false)
 		return
 	})
 
@@ -497,18 +501,18 @@ func main() {
 
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
 		if _, ok := Db.Locations[id]; !ok {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
 		filters, err := Db.ParseFilters(c.QueryArgs())
 		if err != nil {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, false)
 			return
 		}
 
@@ -530,7 +534,7 @@ func main() {
 			}
 			recs := Db.FilterVisits(filters, vs)
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, false)
 				return
 			}
 
@@ -554,7 +558,7 @@ func main() {
 			Avg float64 `json:"avg"`
 		}{avg})
 
-		OkResponse(c, response)
+		OkResponse(c, response, false)
 		return
 	})
 
@@ -562,7 +566,7 @@ func main() {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
 		if c.UserValue("id").(string) != "new" && err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, true)
 			return
 		}
 
@@ -577,18 +581,18 @@ func main() {
 			Birthday  json.RawMessage `json:"birth_date"`
 		}
 		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
 		if string(t.ID) == "null" || string(t.Gender) == "null" || string(t.Birthday) == "null" || string(t.FirstName) == "null" || string(t.LastName) == "null" || string(t.Email) == "null" {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
 		if c.UserValue("id").(string) != "new" {
 			if _, ok := Db.Users[id]; !ok {
-				ErrorResponse(c, fasthttp.StatusNotFound)
+				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
 			u = Db.Users[id]
@@ -598,12 +602,12 @@ func main() {
 		if len(t.ID) > 0 {
 			u.ID, err = strconv.Atoi(string(t.ID))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 		if c.UserValue("id").(string) != "new" && u.ID != id {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -612,7 +616,7 @@ func main() {
 			u.FirstName = strings.Trim(f, "\"")
 		}
 		if utf8.RuneCountInString(u.FirstName) > 50 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -621,7 +625,7 @@ func main() {
 			u.LastName = strings.Trim(l, "\"")
 		}
 		if utf8.RuneCountInString(u.LastName) > 50 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -630,20 +634,20 @@ func main() {
 			u.Gender = strings.Trim(g, "\"")
 		}
 		if u.Gender != "f" && u.Gender != "m" {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
 		if len(t.Birthday) > 0 {
 			u.Birthday, err = strconv.ParseInt(string(t.Birthday), 10, 64)
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 
 		if u.Birthday < -1262304000 || u.Birthday > 915235199 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -652,16 +656,13 @@ func main() {
 			u.Email = strings.Trim(e, "\"")
 		}
 		if utf8.RuneCountInString(u.Email) > 100 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
-		mutex := &sync.Mutex{}
-		mutex.Lock()
 		Db.Users[u.ID] = u
-		mutex.Unlock()
 
-		OkResponse(c, []byte(`{}`))
+		OkResponse(c, []byte(`{}`), true)
 		return
 	})
 
@@ -669,7 +670,7 @@ func main() {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
 		if c.UserValue("id").(string) != "new" && err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, true)
 			return
 		}
 
@@ -683,12 +684,12 @@ func main() {
 		}
 
 		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
 		if string(t.ID) == "null" || string(t.User) == "null" || string(t.Location) == "null" || string(t.Visited) == "null" || string(t.Mark) == "null" {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -698,7 +699,7 @@ func main() {
 			v = Visit{}
 		} else {
 			if _, ok := Db.Visits[id]; !ok {
-				ErrorResponse(c, fasthttp.StatusNotFound)
+				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
 			v = Db.Visits[id]
@@ -706,12 +707,12 @@ func main() {
 		if len(t.ID) > 0 {
 			v.ID, err = strconv.Atoi(string(t.ID))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 		if c.UserValue("id").(string) != "new" && v.ID != id {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 		if len(t.User) > 0 {
@@ -720,13 +721,13 @@ func main() {
 			}
 			v.User, err = strconv.Atoi(string(t.User))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 
 		if _, ok := Db.Users[v.User]; !ok {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -736,41 +737,39 @@ func main() {
 			}
 			v.Location, err = strconv.Atoi(string(t.Location))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 		if _, ok := Db.Locations[v.Location]; !ok {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
 		if len(t.Visited) > 0 {
 			v.Visited, err = strconv.Atoi(string(t.Visited))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 		if v.Visited < 946684800 || v.Visited > 1420156799 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
 		if len(t.Mark) > 0 {
 			v.Mark, err = strconv.Atoi(string(t.Mark))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 		if v.Mark < 0 || v.Mark > 5 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
-		mutex := &sync.Mutex{}
-		mutex.Lock()
 		if _, ok := Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
 			Db.UserVisit[oldUser][v.ID]--
 		}
@@ -790,9 +789,8 @@ func main() {
 		Db.LocationVisits[v.Location][v.ID]++
 
 		Db.Visits[v.ID] = v
-		mutex.Unlock()
 
-		OkResponse(c, []byte(`{}`))
+		OkResponse(c, []byte(`{}`), true)
 		return
 	})
 
@@ -800,7 +798,7 @@ func main() {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
 		if c.UserValue("id").(string) != "new" && err != nil {
-			ErrorResponse(c, fasthttp.StatusNotFound)
+			ErrorResponse(c, fasthttp.StatusNotFound, true)
 			return
 		}
 		var l Location
@@ -813,11 +811,11 @@ func main() {
 		}
 
 		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 		if string(t.ID) == "null" || string(t.Distance) == "null" || string(t.Country) == "null" || string(t.City) == "null" || string(t.Place) == "null" {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -825,7 +823,7 @@ func main() {
 			l = Location{}
 		} else {
 			if _, ok := Db.Locations[id]; !ok {
-				ErrorResponse(c, fasthttp.StatusNotFound)
+				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
 			l = Db.Locations[id]
@@ -833,13 +831,13 @@ func main() {
 		if len(t.ID) > 0 {
 			l.ID, err = strconv.Atoi(string(t.ID))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
 
 		if c.UserValue("id").(string) != "new" && l.ID != id {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -848,7 +846,7 @@ func main() {
 			l.Country = strings.Trim(u, "\"")
 		}
 		if utf8.RuneCountInString(l.Country) > 50 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -857,7 +855,7 @@ func main() {
 			l.City = strings.Trim(u, "\"")
 		}
 		if utf8.RuneCountInString(l.City) > 50 {
-			ErrorResponse(c, fasthttp.StatusBadRequest)
+			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
 
@@ -869,16 +867,13 @@ func main() {
 		if len(t.Distance) > 0 {
 			l.Distance, err = strconv.Atoi(string(t.Distance))
 			if err != nil {
-				ErrorResponse(c, fasthttp.StatusBadRequest)
+				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
 		}
-		mutex := &sync.Mutex{}
-		mutex.Lock()
 		Db.Locations[l.ID] = l
-		mutex.Unlock()
 
-		OkResponse(c, []byte(`{}`))
+		OkResponse(c, []byte(`{}`), true)
 		return
 	})
 
