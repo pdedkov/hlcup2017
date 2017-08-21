@@ -265,7 +265,7 @@ func ErrorResponse(c *fasthttp.RequestCtx, code int, close bool) {
 	c.Response.SetStatusCode(code)
 	c.Write([]byte(`{}`))
 	if close {
-		//c.SetConnectionClose()
+		c.SetConnectionClose()
 	}
 }
 
@@ -274,7 +274,7 @@ func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 	c.Response.SetStatusCode(fasthttp.StatusOK)
 	c.Write(body)
 	if close {
-		//c.SetConnectionClose()
+		c.SetConnectionClose()
 	}
 }
 
