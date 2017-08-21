@@ -616,9 +616,8 @@ func main() {
 		}
 
 		var u User
-
 		t := RawUser{}
-		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
+		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -715,7 +714,7 @@ func main() {
 		var v Visit
 		t := RawVisit{}
 
-		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
+		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -726,11 +725,12 @@ func main() {
 		}
 
 		var oldUser, oldLocation int
+		var ok bool
 
 		if c.UserValue("id").(string) == "new" {
 			v = Visit{}
 		} else {
-			if _, ok := Db.Visits[id]; !ok {
+			if _, ok = Db.Visits[id]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
@@ -758,7 +758,7 @@ func main() {
 			}
 		}
 
-		if _, ok := Db.Users[v.User]; !ok {
+		if _, ok = Db.Users[v.User]; !ok {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -773,7 +773,7 @@ func main() {
 				return
 			}
 		}
-		if _, ok := Db.Locations[v.Location]; !ok {
+		if _, ok = Db.Locations[v.Location]; !ok {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -802,20 +802,20 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
+		if _, ok = Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
 			Db.UserVisit[oldUser][v.ID]--
 		}
 
-		if _, ok := Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
+		if _, ok = Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
 			Db.LocationVisits[oldLocation][v.ID]--
 		}
 
-		if _, ok := Db.UserVisit[v.User]; !ok {
+		if _, ok = Db.UserVisit[v.User]; !ok {
 			Db.UserVisit[v.User] = make(map[int]int)
 		}
 		Db.UserVisit[v.User][v.ID]++
 
-		if _, ok := Db.LocationVisits[v.Location]; !ok {
+		if _, ok = Db.LocationVisits[v.Location]; !ok {
 			Db.LocationVisits[v.Location] = make(map[int]int)
 		}
 		Db.LocationVisits[v.Location][v.ID]++
@@ -835,8 +835,9 @@ func main() {
 		}
 		var l Location
 		t := RawLocation{}
+		var ok bool
 
-		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
+		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -848,7 +849,7 @@ func main() {
 		if c.UserValue("id").(string) == "new" {
 			l = Location{}
 		} else {
-			if _, ok := Db.Locations[id]; !ok {
+			if _, ok = Db.Locations[id]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
