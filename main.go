@@ -1,5 +1,11 @@
 package main
 
+// TODO
+// 1. encoding/json -> easyjson
+// 2. sync.Pool
+// 3. goroutine for post
+// 4. sync.Mutex on structs
+
 import (
 	"bufio"
 	"encoding/json"
@@ -22,14 +28,14 @@ import (
 const zipPath = "/tmp/data/data.zip"
 
 // 3 files with data
-const dataPath = "/root/data/"
+//const dataPath = "/root/data/"
 
-//const dataPath = "/tmp/data/data/"
+const dataPath = "/tmp/data/data/"
 
 // port
-const port = ":80"
+//const port = ":80"
 
-//const port = ":8080"
+const port = ":8080"
 
 var dataMap = map[string]string{
 	"locations": "locations_%d.json",
@@ -38,6 +44,7 @@ var dataMap = map[string]string{
 }
 
 // User type stuct
+//easyjson:json
 type User struct {
 	ID        int    `json:"id"`
 	FirstName string `json:"first_name"`
@@ -53,6 +60,7 @@ type Users struct {
 }
 
 // Location struct
+//easyjson:json
 type Location struct {
 	ID       int    `json:"id"`
 	Distance int    `json:"distance"`
@@ -67,6 +75,7 @@ type Locations struct {
 }
 
 // Visit struct contain user locations visits
+//easyjson:json
 type Visit struct {
 	ID       int    `json:"id"`
 	User     int    `json:"user"`
@@ -199,17 +208,14 @@ func (d Database) FilterVisits(conditions map[string]interface{}, recs []Visit) 
 	return out
 }
 
-func loadData(path string, v interface{}) error {
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("Wrong file: %+v", err)
-	}
+//easyjson:json
+type Avg struct {
+	Avg float64 `json:"avg"`
+}
 
-	err = json.Unmarshal(b, v)
-	if err != nil {
-		return fmt.Errorf("Unable to unmarshal: %+v", err)
-	}
-	return nil
+//easyjson:json
+type ShortVisits struct {
+	Visits []ShortVisit `json:"visits"`
 }
 
 type ShortVisit struct {
@@ -233,6 +239,19 @@ func (v ByVisited) Less(i, j int) bool {
 
 var NOW int64
 
+func loadData(path string, v interface{}) error {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("Wrong file: %+v", err)
+	}
+
+	err = json.Unmarshal(b, v)
+	if err != nil {
+		return fmt.Errorf("Unable to unmarshal: %+v", err)
+	}
+	return nil
+}
+
 func calcAge(now int64, bd int64) int {
 	diff := now - bd
 	t := time.Unix(diff, 0)
@@ -248,7 +267,6 @@ func ErrorResponse(c *fasthttp.RequestCtx, code int, close bool) {
 	if close {
 		c.SetConnectionClose()
 	}
-
 }
 
 func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
@@ -401,7 +419,7 @@ func main() {
 			return
 		}
 
-		response, _ := json.Marshal(Db.Users[id])
+		response, _ := Db.Users[id].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -418,7 +436,7 @@ func main() {
 			return
 		}
 
-		response, _ := json.Marshal(Db.Visits[id])
+		response, _ := Db.Visits[id].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -435,7 +453,7 @@ func main() {
 			return
 		}
 
-		response, _ := json.Marshal(Db.Locations[id])
+		response, _ := Db.Locations[id].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -486,11 +504,10 @@ func main() {
 			}
 			sort.Sort(ByVisited(v))
 		}
-		r := struct {
-			Visits []ShortVisit `json:"visits"`
-		}{v}
+		r := ShortVisits{v}
 
-		response, _ := json.Marshal(r)
+		response, _ := r.MarshalJSON()
+
 		OkResponse(c, response, false)
 		return
 	})
@@ -554,9 +571,8 @@ func main() {
 			}
 		}
 
-		response, _ := json.Marshal(struct {
-			Avg float64 `json:"avg"`
-		}{avg})
+		A := Avg{avg}
+		response, _ := A.MarshalJSON()
 
 		OkResponse(c, response, false)
 		return
