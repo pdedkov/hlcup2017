@@ -381,344 +381,7 @@ func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup3(out *jwriter.Writer, in Sho
 	out.String(string(in.Place))
 	out.RawByte('}')
 }
-func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup4(in *jlexer.Lexer, out *RawVisit) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeString()
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "id":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.ID).UnmarshalJSON(data))
-			}
-		case "user":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.User).UnmarshalJSON(data))
-			}
-		case "location":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Location).UnmarshalJSON(data))
-			}
-		case "visited_at":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Visited).UnmarshalJSON(data))
-			}
-		case "mark":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Mark).UnmarshalJSON(data))
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup4(out *jwriter.Writer, in RawVisit) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"id\":")
-	out.Raw((in.ID).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"user\":")
-	out.Raw((in.User).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"location\":")
-	out.Raw((in.Location).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"visited_at\":")
-	out.Raw((in.Visited).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"mark\":")
-	out.Raw((in.Mark).MarshalJSON())
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v RawVisit) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup4(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v RawVisit) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup4(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *RawVisit) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup4(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *RawVisit) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup4(l, v)
-}
-func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup5(in *jlexer.Lexer, out *RawUser) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeString()
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "id":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.ID).UnmarshalJSON(data))
-			}
-		case "first_name":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.FirstName).UnmarshalJSON(data))
-			}
-		case "last_name":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.LastName).UnmarshalJSON(data))
-			}
-		case "email":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Email).UnmarshalJSON(data))
-			}
-		case "gender":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Gender).UnmarshalJSON(data))
-			}
-		case "birth_date":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Birthday).UnmarshalJSON(data))
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup5(out *jwriter.Writer, in RawUser) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"id\":")
-	out.Raw((in.ID).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"first_name\":")
-	out.Raw((in.FirstName).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"last_name\":")
-	out.Raw((in.LastName).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"email\":")
-	out.Raw((in.Email).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"gender\":")
-	out.Raw((in.Gender).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"birth_date\":")
-	out.Raw((in.Birthday).MarshalJSON())
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v RawUser) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup5(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v RawUser) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup5(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *RawUser) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup5(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *RawUser) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup5(l, v)
-}
-func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup6(in *jlexer.Lexer, out *RawLocation) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeString()
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "id":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.ID).UnmarshalJSON(data))
-			}
-		case "distance":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Distance).UnmarshalJSON(data))
-			}
-		case "country":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Country).UnmarshalJSON(data))
-			}
-		case "city":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.City).UnmarshalJSON(data))
-			}
-		case "place":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Place).UnmarshalJSON(data))
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup6(out *jwriter.Writer, in RawLocation) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"id\":")
-	out.Raw((in.ID).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"distance\":")
-	out.Raw((in.Distance).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"country\":")
-	out.Raw((in.Country).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"city\":")
-	out.Raw((in.City).MarshalJSON())
-	if !first {
-		out.RawByte(',')
-	}
-	first = false
-	out.RawString("\"place\":")
-	out.Raw((in.Place).MarshalJSON())
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v RawLocation) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup6(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v RawLocation) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup6(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *RawLocation) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup6(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *RawLocation) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup6(l, v)
-}
-func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup7(in *jlexer.Lexer, out *Location) {
+func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup4(in *jlexer.Lexer, out *Location) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -757,7 +420,7 @@ func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup7(in *jlexer.Lexer, out *Loca
 		in.Consumed()
 	}
 }
-func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup7(out *jwriter.Writer, in Location) {
+func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup4(out *jwriter.Writer, in Location) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -797,27 +460,27 @@ func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup7(out *jwriter.Writer, in Loc
 // MarshalJSON supports json.Marshaler interface
 func (v Location) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup7(&w, v)
+	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup4(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Location) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup7(w, v)
+	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup4(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Location) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup7(&r, v)
+	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup4(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Location) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup7(l, v)
+	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup4(l, v)
 }
-func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup8(in *jlexer.Lexer, out *Avg) {
+func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup5(in *jlexer.Lexer, out *Avg) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -848,7 +511,7 @@ func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup8(in *jlexer.Lexer, out *Avg)
 		in.Consumed()
 	}
 }
-func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup8(out *jwriter.Writer, in Avg) {
+func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup5(out *jwriter.Writer, in Avg) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -864,23 +527,23 @@ func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup8(out *jwriter.Writer, in Avg
 // MarshalJSON supports json.Marshaler interface
 func (v Avg) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup8(&w, v)
+	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup5(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Avg) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup8(w, v)
+	easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup5(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Avg) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup8(&r, v)
+	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup5(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Avg) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup8(l, v)
+	easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup5(l, v)
 }

@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/buaazp/fasthttprouter"
-	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
@@ -55,16 +54,6 @@ type User struct {
 	Birthday  int64  `json:"birth_date"`
 }
 
-//easyjson:json
-type RawUser struct {
-	ID        easyjson.RawMessage `json:"id"`
-	FirstName easyjson.RawMessage `json:"first_name"`
-	LastName  easyjson.RawMessage `json:"last_name"`
-	Email     easyjson.RawMessage `json:"email"`
-	Gender    easyjson.RawMessage `json:"gender"`
-	Birthday  easyjson.RawMessage `json:"birth_date"`
-}
-
 // Users is an array of user
 type Users struct {
 	Records []User `json:"users"`
@@ -78,15 +67,6 @@ type Location struct {
 	Country  string `json:"country"`
 	City     string `json:"city"`
 	Place    string `json:"place"`
-}
-
-//easyjson:json
-type RawLocation struct {
-	ID       easyjson.RawMessage `json:"id"`
-	Distance easyjson.RawMessage `json:"distance"`
-	Country  easyjson.RawMessage `json:"country"`
-	City     easyjson.RawMessage `json:"city"`
-	Place    easyjson.RawMessage `json:"place"`
 }
 
 // Locations is an array of location
@@ -106,15 +86,6 @@ type Visit struct {
 	Gender   string `json:"-"`
 	Country  string `json:"-"`
 	Distance int    `json:"-"`
-}
-
-//easyjson:json
-type RawVisit struct {
-	ID       easyjson.RawMessage `json:"id"`
-	User     easyjson.RawMessage `json:"user"`
-	Location easyjson.RawMessage `json:"location"`
-	Visited  easyjson.RawMessage `json:"visited_at"`
-	Mark     easyjson.RawMessage `json:"mark"`
 }
 
 // type Visits array of visit
@@ -294,7 +265,7 @@ func ErrorResponse(c *fasthttp.RequestCtx, code int, close bool) {
 	c.Response.SetStatusCode(code)
 	c.Write([]byte(`{}`))
 	if close {
-		c.SetConnectionClose()
+		//c.SetConnectionClose()
 	}
 }
 
@@ -303,7 +274,7 @@ func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 	c.Response.SetStatusCode(fasthttp.StatusOK)
 	c.Write(body)
 	if close {
-		c.SetConnectionClose()
+		//c.SetConnectionClose()
 	}
 }
 
@@ -616,8 +587,16 @@ func main() {
 		}
 
 		var u User
-		var t RawUser
-		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
+
+		var t struct {
+			ID        json.RawMessage `json:"id"`
+			FirstName json.RawMessage `json:"first_name"`
+			LastName  json.RawMessage `json:"last_name"`
+			Email     json.RawMessage `json:"email"`
+			Gender    json.RawMessage `json:"gender"`
+			Birthday  json.RawMessage `json:"birth_date"`
+		}
+		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -712,9 +691,15 @@ func main() {
 		}
 
 		var v Visit
-		var t RawVisit
+		var t struct {
+			ID       json.RawMessage `json:"id"`
+			User     json.RawMessage `json:"user"`
+			Location json.RawMessage `json:"location"`
+			Visited  json.RawMessage `json:"visited_at"`
+			Mark     json.RawMessage `json:"mark"`
+		}
 
-		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
+		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -833,9 +818,15 @@ func main() {
 			return
 		}
 		var l Location
-		var t RawLocation
+		var t struct {
+			ID       json.RawMessage `json:"id"`
+			Distance json.RawMessage `json:"distance"`
+			Country  json.RawMessage `json:"country"`
+			City     json.RawMessage `json:"city"`
+			Place    json.RawMessage `json:"place"`
+		}
 
-		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
+		if err := json.Unmarshal(c.PostBody(), &t); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
