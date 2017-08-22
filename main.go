@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/buaazp/fasthttprouter"
-	"github.com/constabulary/gb/testdata/src/f"
 	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
 	log "github.com/sirupsen/logrus"
