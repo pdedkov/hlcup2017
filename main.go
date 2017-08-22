@@ -1,9 +1,7 @@
 package main
 
 // TODO
-// 2. sync.Pool
-// 3. goroutine for post
-// 4. sync.Mutex on structs
+// 4. sync.Mutex on structs ?
 
 import (
 	"bufio"
@@ -67,7 +65,7 @@ type RawUser struct {
 
 var UserPool = sync.Pool{
 	New: func() interface{} {
-		return RawUser{}
+		return &RawUser{}
 	},
 }
 
@@ -97,7 +95,7 @@ type RawLocation struct {
 
 var LocationPool = sync.Pool{
 	New: func() interface{} {
-		return RawLocation{}
+		return &RawLocation{}
 	},
 }
 
@@ -131,7 +129,7 @@ type RawVisit struct {
 
 var VisitPool = sync.Pool{
 	New: func() interface{} {
-		return RawVisit{}
+		return &RawVisit{}
 	},
 }
 
@@ -634,7 +632,7 @@ func main() {
 		}
 
 		var u User
-		t := UserPool.Get().(RawUser)
+		t := UserPool.Get().(*RawUser)
 		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
@@ -716,7 +714,7 @@ func main() {
 		}
 		go func() {
 			Db.Users[u.ID] = u
-			t = RawUser{}
+			t.ID = &RawUser{}
 			UserPool.Put(t)
 		}()
 
@@ -733,7 +731,7 @@ func main() {
 		}
 
 		var v Visit
-		t := VisitPool.Get().(RawVisit)
+		t := VisitPool.Get().(*RawVisit)
 
 		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -843,7 +841,7 @@ func main() {
 			Db.LocationVisits[v.Location][v.ID]++
 
 			Db.Visits[v.ID] = v
-			t = RawVisit{}
+			t = &RawVisit{}
 			VisitPool.Put(t)
 		}()
 
@@ -859,7 +857,7 @@ func main() {
 			return
 		}
 		var l Location
-		t := LocationPool.Get().(RawLocation)
+		t := LocationPool.Get().(*RawLocation)
 
 		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -925,7 +923,7 @@ func main() {
 
 		go func() {
 			Db.Locations[l.ID] = l
-			t = RawLocation{}
+			t.ID, t.Place, t.Distance, t.City, t.Country = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
 			LocationPool.Put(t)
 		}()
 
