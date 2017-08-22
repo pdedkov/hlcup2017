@@ -291,12 +291,12 @@ var NOW int64
 func loadData(path string, v interface{}) error {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("Wrong file: %+v", err)
+		return err
 	}
 
 	err = json.Unmarshal(b, v)
 	if err != nil {
-		return fmt.Errorf("Unable to unmarshal: %+v", err)
+		return err
 	}
 	return nil
 }
