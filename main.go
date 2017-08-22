@@ -1,8 +1,5 @@
 package main
 
-// TODO
-// 4. sync.Mutex on structs ?
-
 import (
 	"bufio"
 	"encoding/json"
