@@ -714,7 +714,7 @@ func main() {
 		}
 		go func() {
 			Db.Users[u.ID] = u
-			t = &RawUser{}
+			t.ID, t.Email, t.Gender, t.Birthday, t.LastName, t.FirstName = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
 			UserPool.Put(t)
 		}()
 
@@ -841,7 +841,7 @@ func main() {
 			Db.LocationVisits[v.Location][v.ID]++
 
 			Db.Visits[v.ID] = v
-			t = &RawVisit{}
+			t.ID, t.Location, t.User, t.Mark, t.Visited = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
 			VisitPool.Put(t)
 		}()
 
