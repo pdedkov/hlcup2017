@@ -714,7 +714,7 @@ func main() {
 		}
 		go func() {
 			Db.Users[u.ID] = u
-			t.ID = &RawUser{}
+			t = &RawUser{}
 			UserPool.Put(t)
 		}()
 
