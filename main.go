@@ -184,7 +184,7 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 	if args.Has("gender") {
 		g := string(args.Peek("gender"))
 		if g != "m" && g != "f" {
-			return nil, err
+			return nil, fmt.Errorf("Gender fail")
 		}
 		conditions["gender"] = g
 	}
