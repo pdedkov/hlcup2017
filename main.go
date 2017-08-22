@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/buaazp/fasthttprouter"
+	"github.com/constabulary/gb/testdata/src/f"
 	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
 	log "github.com/sirupsen/logrus"
@@ -150,54 +151,56 @@ type Database struct {
 func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, error) {
 	conditions := make(map[string]interface{})
 
+	var err error
+	var v int
 	if args.Has("fromDate") {
-		v, err := strconv.Atoi(string(args.Peek("fromDate")))
+		v, err = strconv.Atoi(string(args.Peek("fromDate")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong from date %d", v)
+			return nil, err
 		}
 		conditions["fromDate"] = v
 	}
 
 	if args.Has("toDate") {
-		v, err := strconv.Atoi(string(args.Peek("toDate")))
+		v, err = strconv.Atoi(string(args.Peek("toDate")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong to date %d", v)
+			return nil, err
 		}
 		conditions["toDate"] = v
 	}
 
 	if args.Has("fromAge") {
-		v, err := strconv.Atoi(string(args.Peek("fromAge")))
+		v, err = strconv.Atoi(string(args.Peek("fromAge")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong from age %d", v)
+			return nil, err
 		}
 		conditions["fromAge"] = v
 	}
 
 	if args.Has("toAge") {
-		v, err := strconv.Atoi(string(args.Peek("toAge")))
+		v, err = strconv.Atoi(string(args.Peek("toAge")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong to age %d", v)
+			return nil, err
 		}
 		conditions["toAge"] = v
 	}
 
 	if args.Has("gender") {
-		v := string(args.Peek("gender"))
-		if v != "m" && v != "f" {
-			return nil, fmt.Errorf("Wrong gender %s", v)
+		g := string(args.Peek("gender"))
+		if g != "m" && g != "f" {
+			return nil, err
 		}
-		conditions["gender"] = v
+		conditions["gender"] = g
 	}
 	if args.Has("country") {
-		v, _ := url.QueryUnescape(string(args.Peek("country")))
-		conditions["country"] = v
+		c, _ := url.QueryUnescape(string(args.Peek("country")))
+		conditions["country"] = c
 	}
 
 	if args.Has("toDistance") {
-		v, err := strconv.Atoi(string(args.Peek("toDistance")))
+		v, err = strconv.Atoi(string(args.Peek("toDistance")))
 		if err != nil {
-			return nil, fmt.Errorf("Wrong distance %d", v)
+			return nil, err
 		}
 		conditions["toDistance"] = v
 	}
@@ -209,39 +212,41 @@ func (d Database) ParseFilters(args *fasthttp.Args) (map[string]interface{}, err
 func (d Database) FilterVisits(conditions map[string]interface{}, recs []Visit) []Visit {
 	var out []Visit
 
+	var ok bool
+	var v interface{}
 	for _, rec := range recs {
-		if v, ok := conditions["fromDate"]; ok {
+		if v, ok = conditions["fromDate"]; ok {
 			if rec.Visited < v.(int) {
 				continue
 			}
 		}
-		if v, ok := conditions["toDate"]; ok {
+		if v, ok = conditions["toDate"]; ok {
 			if rec.Visited > v.(int) {
 				continue
 			}
 		}
-		if v, ok := conditions["fromAge"]; ok {
+		if v, ok = conditions["fromAge"]; ok {
 			if rec.Age < v.(int) {
 				continue
 			}
 		}
-		if v, ok := conditions["toAge"]; ok {
+		if v, ok = conditions["toAge"]; ok {
 			if rec.Age >= v.(int) {
 				continue
 			}
 		}
-		if v, ok := conditions["toDistance"]; ok {
+		if v, ok = conditions["toDistance"]; ok {
 			if rec.Distance >= v.(int) {
 				continue
 			}
 		}
-		if v, ok := conditions["gender"]; ok {
+		if v, ok = conditions["gender"]; ok {
 			if rec.Gender != v.(string) {
 				continue
 			}
 		}
 
-		if v, ok := conditions["country"]; ok {
+		if v, ok = conditions["country"]; ok {
 			if rec.Country != v.(string) {
 				continue
 			}
@@ -298,9 +303,7 @@ func loadData(path string, v interface{}) error {
 }
 
 func calcAge(now int64, bd int64) int {
-	diff := now - bd
-	t := time.Unix(diff, 0)
-	y, _, _ := t.Date()
+	y, _, _ := time.Unix(now-bd, 0).Date()
 
 	return y - 1970
 }
@@ -368,7 +371,7 @@ func main() {
 	for key, value := range dataMap {
 		for i := 1; ; i++ {
 			path := fmt.Sprintf(dataPath+value, i)
-			if _, err := os.Stat(path); os.IsNotExist(err) {
+			if _, err = os.Stat(path); os.IsNotExist(err) {
 				log.Printf("%s not exists", path)
 				break
 			}
@@ -377,7 +380,7 @@ func main() {
 			switch key {
 			case "locations":
 				var l Locations
-				err := loadData(path, &l)
+				err = loadData(path, &l)
 				if err != nil {
 					panic(err)
 				}
@@ -385,7 +388,7 @@ func main() {
 				ls = append(ls, l.Records...)
 			case "users":
 				var u Users
-				err := loadData(path, &u)
+				err = loadData(path, &u)
 				if err != nil {
 					panic(err)
 				}
@@ -393,7 +396,7 @@ func main() {
 				us = append(us, u.Records...)
 			case "visits":
 				var v Visits
-				err := loadData(path, &v)
+				err = loadData(path, &v)
 				if err != nil {
 					panic(err)
 				}
@@ -861,7 +864,7 @@ func main() {
 		var l Location
 		t := LocationPool.Get().(*RawLocation)
 		var u string
-		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
+		if err = t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
