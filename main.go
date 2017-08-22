@@ -1,7 +1,6 @@
 package main
 
 // TODO
-// 1. encoding/json -> easyjson
 // 2. sync.Pool
 // 3. goroutine for post
 // 4. sync.Mutex on structs
