@@ -632,7 +632,9 @@ func main() {
 		}
 
 		var u User
+		var str string
 		t := UserPool.Get().(*RawUser)
+
 		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
@@ -665,8 +667,8 @@ func main() {
 		}
 
 		if len(t.FirstName) > 0 {
-			f, _ := strconv.Unquote(string(t.FirstName))
-			u.FirstName = strings.Trim(f, "\"")
+			str, _ = strconv.Unquote(string(t.FirstName))
+			u.FirstName = strings.Trim(str, "\"")
 		}
 		if utf8.RuneCountInString(u.FirstName) > 50 {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -674,8 +676,8 @@ func main() {
 		}
 
 		if len(t.LastName) > 0 {
-			l, _ := strconv.Unquote(string(t.LastName))
-			u.LastName = strings.Trim(l, "\"")
+			str, _ = strconv.Unquote(string(t.LastName))
+			u.LastName = strings.Trim(str, "\"")
 		}
 		if utf8.RuneCountInString(u.LastName) > 50 {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -683,8 +685,8 @@ func main() {
 		}
 
 		if len(t.Gender) > 0 {
-			g, _ := strconv.Unquote(string(t.Gender))
-			u.Gender = strings.Trim(g, "\"")
+			str, _ = strconv.Unquote(string(t.Gender))
+			u.Gender = strings.Trim(str, "\"")
 		}
 		if u.Gender != "f" && u.Gender != "m" {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -705,8 +707,8 @@ func main() {
 		}
 
 		if len(t.Email) > 0 {
-			e, _ := strconv.Unquote(string(t.Email))
-			u.Email = strings.Trim(e, "\"")
+			str, _ = strconv.Unquote(string(t.Email))
+			u.Email = strings.Trim(str, "\"")
 		}
 		if utf8.RuneCountInString(u.Email) > 100 {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -733,7 +735,7 @@ func main() {
 		var v Visit
 		t := VisitPool.Get().(*RawVisit)
 
-		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
+		if err = t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -858,7 +860,7 @@ func main() {
 		}
 		var l Location
 		t := LocationPool.Get().(*RawLocation)
-
+		var u string
 		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
@@ -891,7 +893,7 @@ func main() {
 		}
 
 		if len(t.Country) > 0 {
-			u, _ := strconv.Unquote(string(t.Country))
+			u, _ = strconv.Unquote(string(t.Country))
 			l.Country = strings.Trim(u, "\"")
 		}
 		if utf8.RuneCountInString(l.Country) > 50 {
@@ -900,7 +902,7 @@ func main() {
 		}
 
 		if len(t.City) > 0 {
-			u, _ := strconv.Unquote(string(t.City))
+			u, _ = strconv.Unquote(string(t.City))
 			l.City = strings.Trim(u, "\"")
 		}
 		if utf8.RuneCountInString(l.City) > 50 {
@@ -909,7 +911,7 @@ func main() {
 		}
 
 		if len(t.Place) > 0 {
-			u, _ := strconv.Unquote(string(t.Place))
+			u, _ = strconv.Unquote(string(t.Place))
 			l.Place = strings.Trim(u, "\"")
 		}
 
