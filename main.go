@@ -697,7 +697,7 @@ func main() {
 		}
 		Db.Users[u.ID] = u
 		t.ID, t.Email, t.Gender, t.Birthday, t.LastName, t.FirstName = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-		UserPool.Put(t)
+		go UserPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
@@ -822,7 +822,7 @@ func main() {
 
 		Db.Visits[v.ID] = v
 		t.ID, t.Location, t.User, t.Mark, t.Visited = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-		VisitPool.Put(t)
+		go VisitPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
@@ -902,7 +902,7 @@ func main() {
 
 		Db.Locations[l.ID] = l
 		t.ID, t.Place, t.Distance, t.City, t.Country = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-		LocationPool.Put(t)
+		go LocationPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
