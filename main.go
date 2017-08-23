@@ -7,9 +7,9 @@ import (
 	"github.com/buaazp/fasthttprouter"
 	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
-	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"sort"
@@ -346,20 +346,16 @@ func main() {
 			tm, err := strconv.Atoi(strings.TrimRight(line, "\n"))
 			if err == nil {
 				NOW = int64(tm)
-				log.Printf("get timestamp from options.txt %d", NOW)
 			}
 		}
 		f.Close()
 	}
 	if NOW == 0 {
-		log.Printf("open fail: %s", dataPath+"options.txt")
 		info, err := os.Stat(zipPath + "data.zip")
 		if err != nil {
 			NOW = time.Now().Unix()
-			log.Printf("get timestamp from time.Now() %d", NOW)
 		} else {
 			NOW = info.ModTime().Unix()
-			log.Printf("get timestamp from mtime %d", NOW)
 		}
 	}
 
@@ -368,10 +364,8 @@ func main() {
 		for i := 1; ; i++ {
 			path := fmt.Sprintf(dataPath+value, i)
 			if _, err = os.Stat(path); os.IsNotExist(err) {
-				log.Printf("%s not exists", path)
 				break
 			}
-			log.Printf("%s found. Parsing...", path)
 
 			switch key {
 			case "locations":
@@ -380,7 +374,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Loaded %d locations", len(l.Records))
 				ls = append(ls, l.Records...)
 			case "users":
 				var u Users
@@ -388,7 +381,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Loaded %d users", len(u.Records))
 				us = append(us, u.Records...)
 			case "visits":
 				var v Visits
@@ -396,28 +388,21 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Loaded %d visits", len(v.Records))
 				vs = append(vs, v.Records...)
 			default:
 				panic(fmt.Errorf("something went wrong"))
 			}
 		}
 	}
-
-	log.Print("Data loaded")
-
-	// init maps
 	Db.Locations = make(map[int]Location)
 	for _, r := range ls {
 		Db.Locations[r.ID] = r
 	}
-	log.Printf("Total %d locs", len(Db.Locations))
 
 	Db.Users = make(map[int]User)
 	for _, r := range us {
 		Db.Users[r.ID] = r
 	}
-	log.Printf("Total %d users", len(Db.Users))
 
 	Db.Visits = make(map[int]Visit)
 	for _, r := range vs {
@@ -430,7 +415,6 @@ func main() {
 
 		Db.Visits[r.ID] = r
 	}
-	log.Printf("Total %d visits", len(Db.Visits))
 
 	Db.UserVisit = make(map[int]map[int]int)
 	Db.LocationVisits = make(map[int]map[int]int)
@@ -446,8 +430,6 @@ func main() {
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
-	log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
-	log.Print("Data ready")
 
 	router := fasthttprouter.New()
 
@@ -713,11 +695,9 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
-		go func() {
-			Db.Users[u.ID] = u
-			t.ID, t.Email, t.Gender, t.Birthday, t.LastName, t.FirstName = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-			UserPool.Put(t)
-		}()
+		Db.Users[u.ID] = u
+		t.ID, t.Email, t.Gender, t.Birthday, t.LastName, t.FirstName = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
+		UserPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
@@ -822,29 +802,27 @@ func main() {
 			return
 		}
 
-		go func() {
-			if _, ok = Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
-				Db.UserVisit[oldUser][v.ID]--
-			}
+		if _, ok = Db.UserVisit[oldUser][v.ID]; ok && oldUser > 0 {
+			Db.UserVisit[oldUser][v.ID]--
+		}
 
-			if _, ok = Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
-				Db.LocationVisits[oldLocation][v.ID]--
-			}
+		if _, ok = Db.LocationVisits[oldLocation][v.ID]; ok && oldLocation > 0 {
+			Db.LocationVisits[oldLocation][v.ID]--
+		}
 
-			if _, ok = Db.UserVisit[v.User]; !ok {
-				Db.UserVisit[v.User] = make(map[int]int)
-			}
-			Db.UserVisit[v.User][v.ID]++
+		if _, ok = Db.UserVisit[v.User]; !ok {
+			Db.UserVisit[v.User] = make(map[int]int)
+		}
+		Db.UserVisit[v.User][v.ID]++
 
-			if _, ok = Db.LocationVisits[v.Location]; !ok {
-				Db.LocationVisits[v.Location] = make(map[int]int)
-			}
-			Db.LocationVisits[v.Location][v.ID]++
+		if _, ok = Db.LocationVisits[v.Location]; !ok {
+			Db.LocationVisits[v.Location] = make(map[int]int)
+		}
+		Db.LocationVisits[v.Location][v.ID]++
 
-			Db.Visits[v.ID] = v
-			t.ID, t.Location, t.User, t.Mark, t.Visited = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-			VisitPool.Put(t)
-		}()
+		Db.Visits[v.ID] = v
+		t.ID, t.Location, t.User, t.Mark, t.Visited = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
+		VisitPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
@@ -922,17 +900,12 @@ func main() {
 			}
 		}
 
-		go func() {
-			Db.Locations[l.ID] = l
-			t.ID, t.Place, t.Distance, t.City, t.Country = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-			LocationPool.Put(t)
-		}()
+		Db.Locations[l.ID] = l
+		t.ID, t.Place, t.Distance, t.City, t.Country = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
+		LocationPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
 	})
-
-	log.Print("Start server")
-	// run server
 	log.Fatal(fasthttp.ListenAndServe(port, router.Handler))
 }
