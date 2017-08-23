@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/buaazp/fasthttprouter"
+	"github.com/gogo/protobuf/test/data"
 	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
 	log "github.com/sirupsen/logrus"
@@ -21,7 +22,7 @@ import (
 )
 
 // path to data folder
-const zipPath = "/tmp/data/data.zip"
+const zipPath = "/tmp/data/"
 
 // 3 files with data
 const dataPath = "/root/data/"
@@ -332,12 +333,12 @@ func main() {
 
 	// prepare database
 	// unzip
-	err := archiver.Zip.Open(zipPath, dataPath)
+	err := archiver.Zip.Open(zipPath+"data.zip", dataPath)
 	if err != nil {
 		panic(err)
 	}
 	// load timestamp
-	f, err := os.Open(dataPath + "options.txt")
+	f, err := os.Open(zipPath + "options.txt")
 	if err == nil {
 		// Start reading from the file with a reader.
 		reader := bufio.NewReader(f)
@@ -353,7 +354,7 @@ func main() {
 	}
 	if NOW == 0 {
 		log.Printf("open fail: %s", dataPath+"options.txt")
-		info, err := os.Stat(zipPath)
+		info, err := os.Stat(zipPath + "data.zip")
 		if err != nil {
 			NOW = time.Now().Unix()
 			log.Printf("get timestamp from time.Now() %d", NOW)
