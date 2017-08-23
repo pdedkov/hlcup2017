@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/buaazp/fasthttprouter"
-	"github.com/gogo/protobuf/test/data"
 	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
 	log "github.com/sirupsen/logrus"
