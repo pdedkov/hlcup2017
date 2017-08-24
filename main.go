@@ -20,7 +20,7 @@ import (
 	"unicode/utf8"
 )
 
-// path to data folder
+// path to zip folder
 const zipPath = "/tmp/data/"
 
 // 3 files with data
