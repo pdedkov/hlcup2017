@@ -12,6 +12,8 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -430,6 +432,9 @@ func main() {
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
+
+	runtime.GC()
+	debug.SetGCPercent(-1)
 
 	router := fasthttprouter.New()
 
