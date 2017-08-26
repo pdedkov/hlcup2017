@@ -347,16 +347,20 @@ func main() {
 			tm, err := strconv.Atoi(strings.TrimRight(line, "\n"))
 			if err == nil {
 				NOW = int64(tm)
+				log.Printf("get timestamp from options.txt %d", NOW)
 			}
 		}
 		f.Close()
 	}
 	if NOW == 0 {
-		info, err := os.Stat(zipPath + "data.zip")
+		log.Printf("open fail: %s", dataPath+"options.txt")
+		info, err := os.Stat(zipPath)
 		if err != nil {
 			NOW = time.Now().Unix()
+			log.Printf("get timestamp from time.Now() %d", NOW)
 		} else {
 			NOW = info.ModTime().Unix()
+			log.Printf("get timestamp from mtime %d", NOW)
 		}
 	}
 
@@ -364,9 +368,11 @@ func main() {
 	for key, value := range dataMap {
 		for i := 1; ; i++ {
 			path := fmt.Sprintf(dataPath+value, i)
-			if _, err = os.Stat(path); os.IsNotExist(err) {
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				log.Printf("%s not exists", path)
 				break
 			}
+			log.Printf("%s found. Parsing...", path)
 
 			switch key {
 			case "locations":
@@ -375,6 +381,7 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				log.Printf("Loaded %d locations", len(l.Records))
 				ls = append(ls, l.Records...)
 			case "users":
 				var u Users
@@ -382,6 +389,7 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				log.Printf("Loaded %d users", len(u.Records))
 				us = append(us, u.Records...)
 			case "visits":
 				var v Visits
@@ -389,21 +397,28 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				log.Printf("Loaded %d visits", len(v.Records))
 				vs = append(vs, v.Records...)
 			default:
 				panic(fmt.Errorf("something went wrong"))
 			}
 		}
 	}
+
+	log.Print("Data loaded")
+
+	// init maps
 	Db.Locations = make(map[int]Location)
 	for _, r := range ls {
 		Db.Locations[r.ID] = r
 	}
+	log.Printf("Total %d locs", len(Db.Locations))
 
 	Db.Users = make(map[int]User)
 	for _, r := range us {
 		Db.Users[r.ID] = r
 	}
+	log.Printf("Total %d users", len(Db.Users))
 
 	Db.Visits = make(map[int]Visit)
 	for _, r := range vs {
@@ -416,6 +431,7 @@ func main() {
 
 		Db.Visits[r.ID] = r
 	}
+	log.Printf("Total %d visits", len(Db.Visits))
 
 	Db.UserVisit = make(map[int]map[int]int)
 	Db.LocationVisits = make(map[int]map[int]int)
@@ -431,8 +447,8 @@ func main() {
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
-
-	runtime.GC()
+	log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
+	log.Print("Data ready")
 
 	router := fasthttprouter.New()
 
