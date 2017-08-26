@@ -369,10 +369,8 @@ func main() {
 		for i := 1; ; i++ {
 			path := fmt.Sprintf(dataPath+value, i)
 			if _, err := os.Stat(path); os.IsNotExist(err) {
-				log.Printf("%s not exists", path)
 				break
 			}
-			log.Printf("%s found. Parsing...", path)
 
 			switch key {
 			case "locations":
@@ -412,13 +410,11 @@ func main() {
 	for _, r := range ls {
 		Db.Locations[r.ID] = r
 	}
-	log.Printf("Total %d locs", len(Db.Locations))
 
 	Db.Users = make(map[int]User)
 	for _, r := range us {
 		Db.Users[r.ID] = r
 	}
-	log.Printf("Total %d users", len(Db.Users))
 
 	Db.Visits = make(map[int]Visit)
 	for _, r := range vs {
@@ -431,7 +427,6 @@ func main() {
 
 		Db.Visits[r.ID] = r
 	}
-	log.Printf("Total %d visits", len(Db.Visits))
 
 	Db.UserVisit = make(map[int]map[int]int)
 	Db.LocationVisits = make(map[int]map[int]int)
@@ -447,7 +442,6 @@ func main() {
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
-	log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
 	log.Print("Data ready")
 
 	var m runtime.MemStats
