@@ -7,11 +7,12 @@ import (
 	"github.com/buaazp/fasthttprouter"
 	"github.com/mailru/easyjson"
 	"github.com/mholt/archiver"
+	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -448,6 +449,10 @@ func main() {
 	}
 	log.Printf("Total %d user visits and %d loc visits", len(Db.UserVisit), len(Db.LocationVisits))
 	log.Print("Data ready")
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	log.Printf("Alloc = %v\nTotalAlloc = %v\nSys = %v\nNumGC = %v\n", m.Alloc/1024, m.TotalAlloc/1024, m.Sys/1024, m.NumGC)
 
 	router := fasthttprouter.New()
 
