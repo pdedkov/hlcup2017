@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -434,7 +433,6 @@ func main() {
 	}
 
 	runtime.GC()
-	debug.SetGCPercent(-1)
 
 	router := fasthttprouter.New()
 
