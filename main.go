@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
