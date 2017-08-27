@@ -43,7 +43,7 @@ var dataMap = map[string]string{
 // User type stuct
 //easyjson:json
 type User struct {
-	ID        int    `json:"id"`
+	ID        uint8  `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
@@ -75,7 +75,7 @@ type Users struct {
 // Location struct
 //easyjson:json
 type Location struct {
-	ID       int    `json:"id"`
+	ID       uint8  `json:"id"`
 	Distance int    `json:"distance"`
 	Country  string `json:"country"`
 	City     string `json:"city"`
@@ -105,9 +105,9 @@ type Locations struct {
 // Visit struct contain user locations visits
 //easyjson:json
 type Visit struct {
-	ID       int    `json:"id"`
-	User     int    `json:"user"`
-	Location int    `json:"location"`
+	ID       uint8  `json:"id"`
+	User     uint8  `json:"user"`
+	Location uint8  `json:"location"`
 	Visited  int    `json:"visited_at"`
 	Mark     int    `json:"mark"`
 	Age      int    `json:"-"`
@@ -137,11 +137,11 @@ type Visits struct {
 }
 
 type Database struct {
-	Locations      map[int]Location
-	Users          map[int]User
-	Visits         map[int]Visit
-	UserVisit      map[int]map[int]int
-	LocationVisits map[int]map[int]int
+	Locations      map[uint8]Location
+	Users          map[uint8]User
+	Visits         map[uint8]Visit
+	UserVisit      map[uint8]map[uint8]uint8
+	LocationVisits map[uint8]map[uint8]uint8
 }
 
 // ValidateFilter validates passed filters
@@ -325,7 +325,13 @@ func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 
 func main() {
 	var Db Database
-	var m runtime.MemStats
+	Db.Locations = make(map[uint8]Location)
+	Db.Users = make(map[uint8]User)
+	Db.Visits = make(map[uint8]Visit)
+	Db.UserVisit = make(map[uint8]map[uint8]uint8)
+	Db.LocationVisits = make(map[uint8]map[uint8]uint8)
+
+	var m *runtime.MemStats
 
 	// prepare database
 	// unzip
@@ -359,12 +365,6 @@ func main() {
 			log.Printf("get timestamp from mtime %d", NOW)
 		}
 	}
-
-	Db.Locations = make(map[int]Location)
-	Db.Users = make(map[int]User)
-	Db.Visits = make(map[int]Visit)
-	Db.UserVisit = make(map[int]map[int]int)
-	Db.LocationVisits = make(map[int]map[int]int)
 
 	// load data to structs
 	for key, value := range dataMap {
@@ -419,24 +419,25 @@ func main() {
 	}
 	log.Print("Data loaded")
 
-	runtime.ReadMemStats(&m)
-	log.Printf("Alloc = %v\tSys = %v\tNumGC = %v", m.Alloc/1024, m.Sys/1024, m.NumGC)
+	runtime.ReadMemStats(m)
+	log.Printf("Alloc=%v Sys=%v NumGC=%v", m.Alloc/1024, m.Sys/1024, m.NumGC)
 
 	for _, value := range Db.Visits {
 		if _, ok := Db.UserVisit[value.User]; !ok {
-			Db.UserVisit[value.User] = make(map[int]int)
+			Db.UserVisit[value.User] = make(map[int]uint8)
 		}
 		Db.UserVisit[value.User][value.ID]++
 
 		if _, ok := Db.LocationVisits[value.Location]; !ok {
-			Db.LocationVisits[value.Location] = make(map[int]int)
+			Db.LocationVisits[value.Location] = make(map[int]uint8)
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
 	log.Print("Data ready")
 
-	runtime.ReadMemStats(&m)
-	log.Printf("Alloc = %v\tSys = %v\tNumGC = %v", m.Alloc/1024, m.Sys/1024, m.NumGC)
+	runtime.ReadMemStats(m)
+	log.Printf("Alloc=%v Sys=%v NumGC =%v", m.Alloc/1024, m.Sys/1024, m.NumGC)
+	m = nil
 
 	router := fasthttprouter.New()
 	router.GET("/users/:id", func(c *fasthttp.RequestCtx) {
