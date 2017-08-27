@@ -43,7 +43,7 @@ var dataMap = map[string]string{
 // User type stuct
 //easyjson:json
 type User struct {
-	ID        uint16 `json:"id"`
+	ID        uint32 `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
@@ -75,7 +75,7 @@ type Users struct {
 // Location struct
 //easyjson:json
 type Location struct {
-	ID       uint16 `json:"id"`
+	ID       uint32 `json:"id"`
 	Distance int    `json:"distance"`
 	Country  string `json:"country"`
 	City     string `json:"city"`
@@ -105,9 +105,9 @@ type Locations struct {
 // Visit struct contain user locations visits
 //easyjson:json
 type Visit struct {
-	ID       uint16 `json:"id"`
-	User     uint16 `json:"user"`
-	Location uint16 `json:"location"`
+	ID       uint32 `json:"id"`
+	User     uint32 `json:"user"`
+	Location uint32 `json:"location"`
 	Visited  int    `json:"visited_at"`
 	Mark     int    `json:"mark"`
 	Age      int    `json:"-"`
@@ -137,11 +137,11 @@ type Visits struct {
 }
 
 type Database struct {
-	Locations      map[uint16]Location
-	Users          map[uint16]User
-	Visits         map[uint16]Visit
-	UserVisit      map[uint16]map[uint16]uint16
-	LocationVisits map[uint16]map[uint16]uint16
+	Locations      map[uint32]Location
+	Users          map[uint32]User
+	Visits         map[uint32]Visit
+	UserVisit      map[uint32]map[uint32]uint32
+	LocationVisits map[uint32]map[uint32]uint32
 }
 
 // ValidateFilter validates passed filters
@@ -325,11 +325,11 @@ func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 
 func main() {
 	var Db Database
-	Db.Locations = make(map[uint16]Location)
-	Db.Users = make(map[uint16]User)
-	Db.Visits = make(map[uint16]Visit)
-	Db.UserVisit = make(map[uint16]map[uint16]uint16)
-	Db.LocationVisits = make(map[uint16]map[uint16]uint16)
+	Db.Locations = make(map[uint32]Location)
+	Db.Users = make(map[uint32]User)
+	Db.Visits = make(map[uint32]Visit)
+	Db.UserVisit = make(map[uint32]map[uint32]uint32)
+	Db.LocationVisits = make(map[uint32]map[uint32]uint32)
 
 	var m *runtime.MemStats
 
@@ -424,12 +424,12 @@ func main() {
 
 	for _, value := range Db.Visits {
 		if _, ok := Db.UserVisit[value.User]; !ok {
-			Db.UserVisit[value.User] = make(map[uint16]uint16)
+			Db.UserVisit[value.User] = make(map[uint32]uint32)
 		}
 		Db.UserVisit[value.User][value.ID]++
 
 		if _, ok := Db.LocationVisits[value.Location]; !ok {
-			Db.LocationVisits[value.Location] = make(map[uint16]uint16)
+			Db.LocationVisits[value.Location] = make(map[uint32]uint32)
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
@@ -447,12 +447,12 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
-		if _, ok := Db.Users[uint16(id)]; !ok {
+		if _, ok := Db.Users[uint32(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
-		response, _ := Db.Users[uint16(id)].MarshalJSON()
+		response, _ := Db.Users[uint32(id)].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -464,12 +464,12 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
-		if _, ok := Db.Visits[uint16(id)]; !ok {
+		if _, ok := Db.Visits[uint32(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
-		response, _ := Db.Visits[uint16(id)].MarshalJSON()
+		response, _ := Db.Visits[uint32(id)].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -481,12 +481,12 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
-		if _, ok := Db.Locations[uint16(id)]; !ok {
+		if _, ok := Db.Locations[uint32(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
-		response, _ := Db.Locations[uint16(id)].MarshalJSON()
+		response, _ := Db.Locations[uint32(id)].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -498,7 +498,7 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.Users[uint16(id)]; !ok {
+		if _, ok := Db.Users[uint32(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
@@ -509,9 +509,9 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.UserVisit[uint16(id)]; ok {
+		if _, ok := Db.UserVisit[uint32(id)]; ok {
 			var vs []Visit
-			for vID, cnt := range Db.UserVisit[uint16(id)] {
+			for vID, cnt := range Db.UserVisit[uint32(id)] {
 				if cnt <= 0 {
 					continue
 				}
@@ -555,7 +555,7 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.Locations[uint16(id)]; !ok {
+		if _, ok := Db.Locations[uint32(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
@@ -566,9 +566,9 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.LocationVisits[uint16(id)]; ok {
+		if _, ok := Db.LocationVisits[uint32(id)]; ok {
 			var vs []Visit
-			for vID, cnt := range Db.LocationVisits[uint16(id)] {
+			for vID, cnt := range Db.LocationVisits[uint32(id)] {
 				if cnt <= 0 {
 					continue
 				}
@@ -634,11 +634,11 @@ func main() {
 		}
 
 		if c.UserValue("id").(string) != "new" {
-			if _, ok := Db.Users[uint16(id)]; !ok {
+			if _, ok := Db.Users[uint32(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
-			u = Db.Users[uint16(id)]
+			u = Db.Users[uint32(id)]
 		} else {
 			u = User{}
 		}
@@ -648,9 +648,9 @@ func main() {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
-			u.ID = uint16(tId)
+			u.ID = uint32(tId)
 		}
-		if c.UserValue("id").(string) != "new" && u.ID != uint16(id) {
+		if c.UserValue("id").(string) != "new" && u.ID != uint32(id) {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -732,17 +732,17 @@ func main() {
 			return
 		}
 
-		var oldUser, oldLocation uint16
+		var oldUser, oldLocation uint32
 		var ok bool
 
 		if c.UserValue("id").(string) == "new" {
 			v = Visit{}
 		} else {
-			if _, ok = Db.Visits[uint16(id)]; !ok {
+			if _, ok = Db.Visits[uint32(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
-			v = Db.Visits[uint16(id)]
+			v = Db.Visits[uint32(id)]
 		}
 		if len(t.ID) > 0 {
 			tId, err := strconv.Atoi(string(t.ID))
@@ -750,9 +750,9 @@ func main() {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
-			v.ID = uint16(tId)
+			v.ID = uint32(tId)
 		}
-		if c.UserValue("id").(string) != "new" && v.ID != uint16(id) {
+		if c.UserValue("id").(string) != "new" && v.ID != uint32(id) {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -765,7 +765,7 @@ func main() {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
-			v.User = uint16(tId)
+			v.User = uint32(tId)
 		}
 
 		if _, ok = Db.Users[v.User]; !ok {
@@ -782,7 +782,7 @@ func main() {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
-			v.Location = uint16(tId)
+			v.Location = uint32(tId)
 		}
 		if _, ok = Db.Locations[v.Location]; !ok {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -822,12 +822,12 @@ func main() {
 		}
 
 		if _, ok = Db.UserVisit[v.User]; !ok {
-			Db.UserVisit[v.User] = make(map[uint16]uint16)
+			Db.UserVisit[v.User] = make(map[uint32]uint32)
 		}
 		Db.UserVisit[v.User][v.ID]++
 
 		if _, ok = Db.LocationVisits[v.Location]; !ok {
-			Db.LocationVisits[v.Location] = make(map[uint16]uint16)
+			Db.LocationVisits[v.Location] = make(map[uint32]uint32)
 		}
 		Db.LocationVisits[v.Location][v.ID]++
 
@@ -861,11 +861,11 @@ func main() {
 		if c.UserValue("id").(string) == "new" {
 			l = Location{}
 		} else {
-			if _, ok := Db.Locations[uint16(id)]; !ok {
+			if _, ok := Db.Locations[uint32(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
-			l = Db.Locations[uint16(id)]
+			l = Db.Locations[uint32(id)]
 		}
 		if len(t.ID) > 0 {
 			tId, err := strconv.Atoi(string(t.ID))
@@ -873,10 +873,10 @@ func main() {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
-			l.ID = uint16(tId)
+			l.ID = uint32(tId)
 		}
 
-		if c.UserValue("id").(string) != "new" && l.ID != uint16(id) {
+		if c.UserValue("id").(string) != "new" && l.ID != uint32(id) {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
