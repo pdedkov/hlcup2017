@@ -331,7 +331,7 @@ func main() {
 	Db.UserVisit = make(map[uint32]map[uint32]uint32)
 	Db.LocationVisits = make(map[uint32]map[uint32]uint32)
 
-	var m *runtime.MemStats
+	var m runtime.MemStats
 
 	// prepare database
 	// unzip
@@ -419,7 +419,7 @@ func main() {
 	}
 	log.Print("Data loaded")
 
-	runtime.ReadMemStats(m)
+	runtime.ReadMemStats(&m)
 	log.Printf("Alloc=%v Sys=%v NumGC=%v", m.Alloc/1024, m.Sys/1024, m.NumGC)
 
 	for _, value := range Db.Visits {
@@ -435,7 +435,7 @@ func main() {
 	}
 	log.Print("Data ready")
 
-	runtime.ReadMemStats(m)
+	runtime.ReadMemStats(&m)
 	log.Printf("Alloc=%v Sys=%v NumGC =%v", m.Alloc/1024, m.Sys/1024, m.NumGC)
 	m = nil
 
