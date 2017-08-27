@@ -61,12 +61,6 @@ type RawUser struct {
 	Birthday  easyjson.RawMessage `json:"birth_date"`
 }
 
-var UserPool = sync.Pool{
-	New: func() interface{} {
-		return &RawUser{}
-	},
-}
-
 // Users is an array of user
 type Users struct {
 	Records []User `json:"users"`
@@ -89,12 +83,6 @@ type RawLocation struct {
 	Country  easyjson.RawMessage `json:"country"`
 	City     easyjson.RawMessage `json:"city"`
 	Place    easyjson.RawMessage `json:"place"`
-}
-
-var LocationPool = sync.Pool{
-	New: func() interface{} {
-		return &RawLocation{}
-	},
 }
 
 // Locations is an array of location
@@ -123,12 +111,6 @@ type RawVisit struct {
 	Location easyjson.RawMessage `json:"location"`
 	Visited  easyjson.RawMessage `json:"visited_at"`
 	Mark     easyjson.RawMessage `json:"mark"`
-}
-
-var VisitPool = sync.Pool{
-	New: func() interface{} {
-		return &RawVisit{}
-	},
 }
 
 // type Visits array of visit
@@ -620,7 +602,7 @@ func main() {
 
 		var u User
 		var str string
-		t := UserPool.Get().(*RawUser)
+		t := RawUser{}
 
 		if err := t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -703,8 +685,6 @@ func main() {
 			return
 		}
 		Db.Users[u.ID] = u
-		t.ID, t.Email, t.Gender, t.Birthday, t.LastName, t.FirstName = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-		go UserPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
@@ -719,7 +699,7 @@ func main() {
 		}
 
 		var v Visit
-		t := VisitPool.Get().(*RawVisit)
+		t := RawVisit{}
 
 		if err = t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -831,8 +811,6 @@ func main() {
 		Db.LocationVisits[v.Location][v.ID]++
 
 		Db.Visits[v.ID] = v
-		t.ID, t.Location, t.User, t.Mark, t.Visited = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-		go VisitPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
@@ -846,7 +824,7 @@ func main() {
 			return
 		}
 		var l Location
-		t := LocationPool.Get().(*RawLocation)
+		t := RawLocation{}
 		var u string
 		if err = t.UnmarshalJSON(c.PostBody()); err != nil {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -912,8 +890,6 @@ func main() {
 		}
 
 		Db.Locations[l.ID] = l
-		t.ID, t.Place, t.Distance, t.City, t.Country = []byte(``), []byte(``), []byte(``), []byte(``), []byte(``)
-		go LocationPool.Put(t)
 
 		OkResponse(c, []byte(`{}`), true)
 		return
