@@ -431,7 +431,6 @@ func main() {
 
 	runtime.ReadMemStats(&m)
 	log.Printf("Alloc=%v Sys=%v NumGC =%v", m.Alloc/1024, m.Sys/1024, m.NumGC)
-	m = nil
 
 	router := fasthttprouter.New()
 	router.GET("/users/:id", func(c *fasthttp.RequestCtx) {
