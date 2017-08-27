@@ -424,12 +424,12 @@ func main() {
 
 	for _, value := range Db.Visits {
 		if _, ok := Db.UserVisit[value.User]; !ok {
-			Db.UserVisit[value.User] = make(map[int]uint8)
+			Db.UserVisit[value.User] = make(map[uint8]uint8)
 		}
 		Db.UserVisit[value.User][value.ID]++
 
 		if _, ok := Db.LocationVisits[value.Location]; !ok {
-			Db.LocationVisits[value.Location] = make(map[int]uint8)
+			Db.LocationVisits[value.Location] = make(map[uint8]uint8)
 		}
 		Db.LocationVisits[value.Location][value.ID]++
 	}
@@ -447,12 +447,12 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
-		if _, ok := Db.Users[id]; !ok {
+		if _, ok := Db.Users[uint8(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
-		response, _ := Db.Users[id].MarshalJSON()
+		response, _ := Db.Users[uint8(id)].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -464,12 +464,12 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
-		if _, ok := Db.Visits[id]; !ok {
+		if _, ok := Db.Visits[uint8(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
-		response, _ := Db.Visits[id].MarshalJSON()
+		response, _ := Db.Visits[uint8(id)].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -481,12 +481,12 @@ func main() {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
-		if _, ok := Db.Locations[id]; !ok {
+		if _, ok := Db.Locations[uint8(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
 
-		response, _ := Db.Locations[id].MarshalJSON()
+		response, _ := Db.Locations[uint8(id)].MarshalJSON()
 		OkResponse(c, response, false)
 		return
 	})
@@ -498,7 +498,7 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.Users[id]; !ok {
+		if _, ok := Db.Users[uint8(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
@@ -509,9 +509,9 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.UserVisit[id]; ok {
+		if _, ok := Db.UserVisit[uint8(id)]; ok {
 			var vs []Visit
-			for vID, cnt := range Db.UserVisit[id] {
+			for vID, cnt := range Db.UserVisit[uint8(id)] {
 				if cnt <= 0 {
 					continue
 				}
@@ -555,7 +555,7 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.Locations[id]; !ok {
+		if _, ok := Db.Locations[uint8(id)]; !ok {
 			ErrorResponse(c, fasthttp.StatusNotFound, false)
 			return
 		}
@@ -566,9 +566,9 @@ func main() {
 			return
 		}
 
-		if _, ok := Db.LocationVisits[id]; ok {
+		if _, ok := Db.LocationVisits[uint8(id)]; ok {
 			var vs []Visit
-			for vID, cnt := range Db.LocationVisits[id] {
+			for vID, cnt := range Db.LocationVisits[uint8(id)] {
 				if cnt <= 0 {
 					continue
 				}
@@ -634,22 +634,23 @@ func main() {
 		}
 
 		if c.UserValue("id").(string) != "new" {
-			if _, ok := Db.Users[id]; !ok {
+			if _, ok := Db.Users[uint8(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
-			u = Db.Users[id]
+			u = Db.Users[uint8(id)]
 		} else {
 			u = User{}
 		}
 		if len(t.ID) > 0 {
-			u.ID, err = strconv.Atoi(string(t.ID))
+			tId, err := strconv.Atoi(string(t.ID))
 			if err != nil {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
+			u.ID = uint8(tId)
 		}
-		if c.UserValue("id").(string) != "new" && u.ID != id {
+		if c.UserValue("id").(string) != "new" && u.ID != uint8(id) {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -731,26 +732,27 @@ func main() {
 			return
 		}
 
-		var oldUser, oldLocation int
+		var oldUser, oldLocation uint8
 		var ok bool
 
 		if c.UserValue("id").(string) == "new" {
 			v = Visit{}
 		} else {
-			if _, ok = Db.Visits[id]; !ok {
+			if _, ok = Db.Visits[uint(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
 			v = Db.Visits[id]
 		}
 		if len(t.ID) > 0 {
-			v.ID, err = strconv.Atoi(string(t.ID))
+			tId, err := strconv.Atoi(string(t.ID))
 			if err != nil {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
+			v.ID = uint8(tId)
 		}
-		if c.UserValue("id").(string) != "new" && v.ID != id {
+		if c.UserValue("id").(string) != "new" && v.ID != uint8(id) {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
@@ -758,11 +760,12 @@ func main() {
 			if v.User > 0 {
 				oldUser = v.User
 			}
-			v.User, err = strconv.Atoi(string(t.User))
+			tId, err := strconv.Atoi(string(t.User))
 			if err != nil {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
+			v.User = uint8(tId)
 		}
 
 		if _, ok = Db.Users[v.User]; !ok {
@@ -774,11 +777,12 @@ func main() {
 			if v.Location > 0 {
 				oldLocation = v.Location
 			}
-			v.Location, err = strconv.Atoi(string(t.Location))
+			tId, err := strconv.Atoi(string(t.Location))
 			if err != nil {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
+			v.Location = uint8(tId)
 		}
 		if _, ok = Db.Locations[v.Location]; !ok {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
@@ -818,12 +822,12 @@ func main() {
 		}
 
 		if _, ok = Db.UserVisit[v.User]; !ok {
-			Db.UserVisit[v.User] = make(map[int]int)
+			Db.UserVisit[v.User] = make(map[uint8]uint8)
 		}
 		Db.UserVisit[v.User][v.ID]++
 
 		if _, ok = Db.LocationVisits[v.Location]; !ok {
-			Db.LocationVisits[v.Location] = make(map[int]int)
+			Db.LocationVisits[v.Location] = make(map[uint8]uint8)
 		}
 		Db.LocationVisits[v.Location][v.ID]++
 
@@ -857,21 +861,22 @@ func main() {
 		if c.UserValue("id").(string) == "new" {
 			l = Location{}
 		} else {
-			if _, ok := Db.Locations[id]; !ok {
+			if _, ok := Db.Locations[uint8(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
-			l = Db.Locations[id]
+			l = Db.Locations[uint8(id)]
 		}
 		if len(t.ID) > 0 {
-			l.ID, err = strconv.Atoi(string(t.ID))
+			tId, err := strconv.Atoi(string(t.ID))
 			if err != nil {
 				ErrorResponse(c, fasthttp.StatusBadRequest, true)
 				return
 			}
+			l.ID = uint8(tId)
 		}
 
-		if c.UserValue("id").(string) != "new" && l.ID != id {
+		if c.UserValue("id").(string) != "new" && l.ID != uint8(id) {
 			ErrorResponse(c, fasthttp.StatusBadRequest, true)
 			return
 		}
