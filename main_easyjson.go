@@ -37,11 +37,11 @@ func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup(in *jlexer.Lexer, out *Visit
 		}
 		switch key {
 		case "id":
-			out.ID = int(in.Int())
+			out.ID = uint8(in.Uint8())
 		case "user":
-			out.User = int(in.Int())
+			out.User = uint8(in.Uint8())
 		case "location":
-			out.Location = int(in.Int())
+			out.Location = uint8(in.Uint8())
 		case "visited_at":
 			out.Visited = int(in.Int())
 		case "mark":
@@ -65,19 +65,19 @@ func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup(out *jwriter.Writer, in Visi
 	}
 	first = false
 	out.RawString("\"id\":")
-	out.Int(int(in.ID))
+	out.Uint8(uint8(in.ID))
 	if !first {
 		out.RawByte(',')
 	}
 	first = false
 	out.RawString("\"user\":")
-	out.Int(int(in.User))
+	out.Uint8(uint8(in.User))
 	if !first {
 		out.RawByte(',')
 	}
 	first = false
 	out.RawString("\"location\":")
-	out.Int(int(in.Location))
+	out.Uint8(uint8(in.Location))
 	if !first {
 		out.RawByte(',')
 	}
@@ -136,7 +136,7 @@ func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup1(in *jlexer.Lexer, out *User
 		}
 		switch key {
 		case "id":
-			out.ID = int(in.Int())
+			out.ID = uint8(in.Uint8())
 		case "first_name":
 			out.FirstName = string(in.String())
 		case "last_name":
@@ -166,7 +166,7 @@ func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup1(out *jwriter.Writer, in Use
 	}
 	first = false
 	out.RawString("\"id\":")
-	out.Int(int(in.ID))
+	out.Uint8(uint8(in.ID))
 	if !first {
 		out.RawByte(',')
 	}
@@ -691,7 +691,7 @@ func easyjson89aae3efDecodeBitbucketOrgPdedkovHlcup7(in *jlexer.Lexer, out *Loca
 		}
 		switch key {
 		case "id":
-			out.ID = int(in.Int())
+			out.ID = uint8(in.Uint8())
 		case "distance":
 			out.Distance = int(in.Int())
 		case "country":
@@ -719,7 +719,7 @@ func easyjson89aae3efEncodeBitbucketOrgPdedkovHlcup7(out *jwriter.Writer, in Loc
 	}
 	first = false
 	out.RawString("\"id\":")
-	out.Int(int(in.ID))
+	out.Uint8(uint8(in.ID))
 	if !first {
 		out.RawByte(',')
 	}

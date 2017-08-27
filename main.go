@@ -738,11 +738,11 @@ func main() {
 		if c.UserValue("id").(string) == "new" {
 			v = Visit{}
 		} else {
-			if _, ok = Db.Visits[uint(id)]; !ok {
+			if _, ok = Db.Visits[uint8(id)]; !ok {
 				ErrorResponse(c, fasthttp.StatusNotFound, true)
 				return
 			}
-			v = Db.Visits[id]
+			v = Db.Visits[uint8(id)]
 		}
 		if len(t.ID) > 0 {
 			tId, err := strconv.Atoi(string(t.ID))
