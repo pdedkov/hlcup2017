@@ -362,7 +362,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Loaded %d locations", len(l.Records))
 				for _, r := range l.Records {
 					Db.Locations[r.ID] = r
 				}
@@ -372,7 +371,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Loaded %d users", len(u.Records))
 				for _, v := range u.Records {
 					Db.Users[v.ID] = v
 				}
@@ -382,7 +380,6 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Loaded %d visits", len(v.Records))
 				for _, r := range v.Records {
 					r.Age = calcAge(NOW, Db.Users[r.User].Birthday)
 
