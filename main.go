@@ -324,11 +324,6 @@ func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 }
 
 func main() {
-	var (
-		ls []Location
-		vs []Visit
-		us []User
-	)
 	var Db Database
 	var m runtime.MemStats
 
@@ -365,6 +360,12 @@ func main() {
 		}
 	}
 
+	Db.Locations = make(map[int]Location)
+	Db.Users = make(map[int]User)
+	Db.Visits = make(map[int]Visit)
+	Db.UserVisit = make(map[int]map[int]int)
+	Db.LocationVisits = make(map[int]map[int]int)
+
 	// load data to structs
 	for key, value := range dataMap {
 		for i := 1; ; i++ {
@@ -381,7 +382,9 @@ func main() {
 					panic(err)
 				}
 				log.Printf("Loaded %d locations", len(l.Records))
-				ls = append(ls, l.Records...)
+				for _, r := range l.Records {
+					Db.Locations[r.ID] = r
+				}
 			case "users":
 				var u Users
 				err = loadData(path, &u)
@@ -389,7 +392,9 @@ func main() {
 					panic(err)
 				}
 				log.Printf("Loaded %d users", len(u.Records))
-				us = append(us, u.Records...)
+				for _, v := range u.Records {
+					Db.Users[v.ID] = v
+				}
 			case "visits":
 				var v Visits
 				err = loadData(path, &v)
@@ -397,7 +402,16 @@ func main() {
 					panic(err)
 				}
 				log.Printf("Loaded %d visits", len(v.Records))
-				vs = append(vs, v.Records...)
+				for _, r := range v.Records {
+					r.Age = calcAge(NOW, Db.Users[r.User].Birthday)
+
+					r.Gender = Db.Users[r.User].Gender
+
+					r.Distance = Db.Locations[r.Location].Distance
+					r.Country = Db.Locations[r.Location].Country
+
+					Db.Visits[r.ID] = r
+				}
 			default:
 				panic(fmt.Errorf("something went wrong"))
 			}
@@ -407,32 +421,6 @@ func main() {
 
 	runtime.ReadMemStats(&m)
 	log.Printf("Alloc = %v\tSys = %v\tNumGC = %v", m.Alloc/1024, m.Sys/1024, m.NumGC)
-
-	// init maps
-	Db.Locations = make(map[int]Location)
-	for _, r := range ls {
-		Db.Locations[r.ID] = r
-	}
-
-	Db.Users = make(map[int]User)
-	for _, r := range us {
-		Db.Users[r.ID] = r
-	}
-
-	Db.Visits = make(map[int]Visit)
-	for _, r := range vs {
-		r.Age = calcAge(NOW, Db.Users[r.User].Birthday)
-
-		r.Gender = Db.Users[r.User].Gender
-
-		r.Distance = Db.Locations[r.Location].Distance
-		r.Country = Db.Locations[r.Location].Country
-
-		Db.Visits[r.ID] = r
-	}
-
-	Db.UserVisit = make(map[int]map[int]int)
-	Db.LocationVisits = make(map[int]map[int]int)
 
 	for _, value := range Db.Visits {
 		if _, ok := Db.UserVisit[value.User]; !ok {
@@ -451,7 +439,6 @@ func main() {
 	log.Printf("Alloc = %v\tSys = %v\tNumGC = %v", m.Alloc/1024, m.Sys/1024, m.NumGC)
 
 	router := fasthttprouter.New()
-
 	router.GET("/users/:id", func(c *fasthttp.RequestCtx) {
 		id, err := strconv.Atoi(c.UserValue("id").(string))
 
