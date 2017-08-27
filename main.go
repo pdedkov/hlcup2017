@@ -330,6 +330,7 @@ func main() {
 		us []User
 	)
 	var Db Database
+	var m runtime.MemStats
 
 	// prepare database
 	// unzip
@@ -402,8 +403,10 @@ func main() {
 			}
 		}
 	}
-
 	log.Print("Data loaded")
+
+	runtime.ReadMemStats(&m)
+	log.Printf("Alloc = %v\tSys = %v\tNumGC = %v", m.Alloc/1024, m.Sys/1024, m.NumGC)
 
 	// init maps
 	Db.Locations = make(map[int]Location)
@@ -444,9 +447,8 @@ func main() {
 	}
 	log.Print("Data ready")
 
-	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	log.Printf("Alloc = %v\nTotalAlloc = %v\nSys = %v\nNumGC = %v\n", m.Alloc/1024, m.TotalAlloc/1024, m.Sys/1024, m.NumGC)
+	log.Printf("Alloc = %v\tSys = %v\tNumGC = %v", m.Alloc/1024, m.Sys/1024, m.NumGC)
 
 	router := fasthttprouter.New()
 
