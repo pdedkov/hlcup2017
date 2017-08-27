@@ -331,7 +331,7 @@ func main() {
 	Db.UserVisit = make(map[uint32]map[uint32]uint32)
 	Db.LocationVisits = make(map[uint32]map[uint32]uint32)
 
-	var m runtime.MemStats
+	var m *runtime.MemStats
 
 	// prepare database
 	// unzip
