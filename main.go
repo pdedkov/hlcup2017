@@ -325,6 +325,12 @@ func OkResponse(c *fasthttp.RequestCtx, body []byte, close bool) {
 
 func main() {
 	var Db Database
+	Db.Locations = make(map[uint16]Location)
+	Db.Users = make(map[uint16]User)
+	Db.Visits = make(map[uint16]Visit)
+	Db.UserVisit = make(map[uint16]map[uint16]uint16)
+	Db.LocationVisits = make(map[uint16]map[uint16]uint16)
+
 	var m runtime.MemStats
 
 	// prepare database
