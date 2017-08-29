@@ -25,12 +25,10 @@ const zipPath = "/tmp/data/"
 
 // 3 files with data
 const dataPath = "/root/data/"
-
 //const dataPath = "/tmp/data/data/"
 
 // port
 const port = ":80"
-
 //const port = ":8080"
 
 var dataMap = map[string]string{
